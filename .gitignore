@@ -1,0 +1,17 @@
+.*.swp
+.*.swo
+.testtimes
+__pycache__
+*.pyc
+build/*
+dist/*
+gsplines.egg-info/*
+*.stats
+*.o
+build/
+ifopt_notes
+npm-debug.log
+compile_commands.json
+tests/CMakeCache.txt
+tests/CMakeFiles/*
+tests/Testing/*
