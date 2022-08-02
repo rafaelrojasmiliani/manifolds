@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 project(manifolds VERSION "0.0.1")
 include(CTest)
-find_program(CTEST_MEMORYCHECK_COMMAND valgrind)
-# -mfpmath avx2
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -funroll-loops -mfpmath=sse ")
+
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -funroll-loops -mfpmath=sse")
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -pthread ")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
