@@ -28,7 +28,7 @@ public:
 
   bool contains(const Eigen::Matrix<double, Dimension, 1> &_in) const {
 
-    if (intervals_.size() != _in.size())
+    if ((long)intervals_.size() != _in.size())
       return false;
     for (long i = 0; i < _in.size(); i++) {
       if (_in(i) < intervals_.at(i).first or intervals_.at(i).second < _in(i))

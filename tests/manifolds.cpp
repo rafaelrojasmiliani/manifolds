@@ -1,13 +1,25 @@
 #include <Manifolds/Manifold.hpp>
+#include <Manifolds/Map.hpp>
 
 #include <gtest/gtest.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <cmath>
+#include <unordered_map>
 
 /* Test that we get the correct basis*/
 using namespace manifolds;
+
+class SO3;
+
+Eigen::Matrix<double, 3, 1> euler_rpy_chart(const SO3 &_obj);
+
+SO3 euler_rpy_parametrization(const Eigen::Matrix<double, 3, 1> &_in);
+
+Eigen::Matrix<double, 3, 1> euler_zyz_chart(const SO3 &_obj);
+
+SO3 euler_zyz_parametrization(const Eigen::Matrix<double, 3, 1> &_in);
 
 class SO3 : public Manifold<SO3, 3> {
 private:
@@ -19,6 +31,19 @@ public:
   SO3(const Eigen::Isometry3d &_in) : mat_(_in) {}
 
   const Eigen::Isometry3d &get_representation() const { return mat_; }
+
+  typedef std::unordered_map<
+      std::string, std::function<Eigen::Matrix<double, 3, 1>(const SO3 &)>>
+      ChartDictionary;
+
+  static const ChartDictionary charts_;
+};
+
+SO3::ChartDictionary charts_ = {{"euler_rpy", euler_rpy_chart}};
+
+template <typename DomainT, typename CodomainT> class Map {
+public:
+  virtual CodomainT operator()(const DomainT &) = 0;
 };
 
 Eigen::Matrix<double, 3, 1> euler_rpy_chart(const SO3 &_obj) {
@@ -61,8 +86,10 @@ SO3 euler_zyz_parametrization(const Eigen::Matrix<double, 3, 1> &_in) {
   return result;
 }
 
-TEST(Basis, Get_Basis) {
+TEST(Manifolds, Parametrization) {
 
+  topology::CartensianInterval<3> interval({{1, 2}});
+  Parametrization<SO3> euler_yzy(euler_rpy_parametrization, interval);
   for (int i = 0; i < 100; i++) {
 
     Eigen::Vector3d v = Eigen::Vector3d::Random();
