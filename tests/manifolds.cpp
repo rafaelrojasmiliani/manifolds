@@ -1,5 +1,4 @@
 #include <Manifolds/Manifold.hpp>
-#include <Manifolds/Map.hpp>
 
 #include <gtest/gtest.h>
 
@@ -89,7 +88,6 @@ SO3 euler_zyz_parametrization(const Eigen::Matrix<double, 3, 1> &_in) {
 TEST(Manifolds, Parametrization) {
 
   topology::CartensianInterval<3> interval({{1, 2}});
-  Parametrization<SO3> euler_yzy(euler_rpy_parametrization, interval);
   for (int i = 0; i < 100; i++) {
 
     Eigen::Vector3d v = Eigen::Vector3d::Random();
