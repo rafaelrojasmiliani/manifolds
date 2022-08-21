@@ -1,8 +1,10 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <algorithm> // std::sort, std::stable_sort
 #include <cmath>
 #include <gtest/gtest.h>
+#include <numeric> // std::iota
 
 /* This example shows how to automatically generate a chart in the sphere from
  * two points.
@@ -38,21 +40,27 @@ public:
 
 class Chart {
 private:
-  Eigen::Vector3d x_;
-  Eigen::Vector3d y_;
-  Eigen::Vector3d z_;
+  const Eigen::Vector3d x_;
+  const Eigen::Vector3d y_;
+  const Eigen::Vector3d z_;
 
 public:
   Chart(const S2 &_p1, const S2 &_p2)
       : x_(_p1.get_representation().normalized()),
         y_((_p2.get_representation() - _p2.get_representation().dot(x_) * x_)
                .normalized()),
-        z_(x_.cross(y_)) {}
+        z_(x_.cross(y_)) {
+
+    std::cout << x_.transpose() << " <- x \n";
+    std::cout << y_.transpose() << " <- y \n";
+    std::cout << z_.transpose() << " <- z \n";
+  }
   Eigen::Vector2d operator()(const S2 &_p) const {
     const Eigen::Vector3d &p = _p.get_representation();
     double x = p.dot(x_);
     double y = p.dot(y_);
     double z = p.dot(z_);
+    std::cout << "x " << x << " y " << y << " z " << z << std::endl;
     double inclination = std::acos(z);
     double azimuth = std::atan2(y, x);
     Eigen::Vector2d result;
@@ -98,8 +106,9 @@ private:
 
 public:
   Parametrization(const S2 &_p1, const S2 &_p2)
-      : x_(_p1.get_representation()),
-        y_(_p2.get_representation() - _p2.get_representation().dot(x_) * x_),
+      : x_(_p1.get_representation().normalized()),
+        y_((_p2.get_representation() - _p2.get_representation().dot(x_) * x_)
+               .normalized()),
         z_(x_.cross(y_)) {}
   S2 operator()(const Eigen::Vector2d &_x) const {
     const double &inclination = _x(0);
@@ -108,6 +117,7 @@ public:
                             std::sin(azimuth) * std::sin(inclination) * y_ +
                             std::cos(inclination) * z_;
 
+    std::cout << "point =  " << point.transpose() << std::endl;
     return S2(point);
   }
 
@@ -116,16 +126,44 @@ public:
     const double &azimuth = _x(1);
     Eigen::Matrix<double, 3, 2> result;
     /*
-    result(0, 0) = dacos * z_(0);
-    result(0, 1) = dacos * z_(1);
-    result(0, 2) = dacos * z_(2);
+        double x = p.dot(x_);
+        double y = p.dot(y_);
+        double z = p.dot(z_);
+        double dacos = x * x / (std::sqrt(x * x + y * y));
+        result(0, 0) = dacos * z_(0);
+        result(0, 1) = dacos * z_(1);
+        result(0, 2) = dacos * z_(2);
 
-    double datan = x * x / (std::sqrt(x * x + y * y));
-    result(1, 0) = datan * z_(0);
-    result(1, 1) = datan * z_(1);
-    result(1, 2) = 0.0;
+        double datan = x * x / (std::sqrt(x * x + y * y));
+        result(1, 0) = datan * z_(0);
+        result(1, 1) = datan * z_(1);
+        result(1, 2) = 0.0;
     */
+    return result;
+  }
+};
 
+class S2Spline {
+private:
+  Eigen::VectorXd coefficients_;
+  Eigen::VectorXd domain_intervals_;
+  std::vector<Parametrization> parametrization_;
+
+public:
+  std::vector<S2> operator()(const Eigen::VectorXd &_t) {
+    std::vector<long> idx(_t.size());
+    std::vector<long> idx_interval(_t.size());
+
+    std::vector<S2> result(_t.size());
+    std::iota(idx.begin(), idx.end(), 0);
+    stable_sort(idx.begin(), idx.end(),
+                [&_t](long i1, long i2) { return _t(i1) < _t(i2); });
+
+    Eigen::VectorXd buffer_(2);
+    for (const auto &i : idx) {
+      Eigen::Vector2d x;
+      result[i] = parametrization_[i](x);
+    }
     return result;
   }
 };
