@@ -3,14 +3,18 @@
 #include <Manifolds/Topology/Open.hpp>
 namespace manifolds {
 
-template <typename Current, long Dim>
-class Manifold : public topology::Open<Manifold<Current, Dim>> {
-private:
+template <typename R, long Dim, typename T, long TDim> class Manifold {
+protected:
+  R representation_;
+
 public:
+  template <typename... Ts>
+  Manifold(Ts &&... args) : representation_(args...) {}
   static const long dim = Dim;
-  Manifold()
-      : topology::Open<Manifold<Current, Dim>>(
-            [](const Manifold<Current, Dim> &) { return true; }) {}
+  static const long tangent_repr_dim = TDim;
+  typedef R Representation;
+  typedef T TangentRepresentation;
+  const R &repr() const { return representation_; };
 };
 
 } // namespace manifolds

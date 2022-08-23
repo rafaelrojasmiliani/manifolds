@@ -1,14 +1,13 @@
 #pragma once
 
+#include <Manifolds/Manifold.hpp>
 #include <Manifolds/Topology/Open.hpp>
 
 #include <Eigen/Core>
 #include <memory>
 
 namespace manifolds {
-
-class Manifold {};
-
+/*
 class MapBase {
 
 public:
@@ -80,5 +79,18 @@ public:
     return result;
   }
 };
+*/
+
+template <typename T> class Parametrization;
+template <typename T> class Chart {
+public:
+  virtual Eigen::Matrix<double, T::dim, 1> operator()(const T &x) const = 0;
+  virtual Eigen::Matrix<double, T::dim, T::tangent_repr_dim>
+  diff(const T &x) const = 0;
+
+  Parametrization<T> inverse() = 0;
+};
+
+template <typename T> class Parametrization {};
 
 } // namespace manifolds

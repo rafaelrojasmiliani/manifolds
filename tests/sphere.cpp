@@ -3,6 +3,7 @@
 #include <Eigen/Geometry>
 #include <algorithm> // std::sort, std::stable_sort
 #include <cmath>
+#include <gsplines/Collocation/GaussLobattoLagrange.hpp>
 #include <gtest/gtest.h>
 #include <numeric> // std::iota
 
@@ -46,7 +47,8 @@ private:
 
 public:
   Chart(const S2 &_p1, const S2 &_p2)
-      : x_(_p1.get_representation().normalized()),
+      : x_((0.5 * (_p1.get_representation() + _p2.get_representation()))
+               .normalized()),
         y_((_p2.get_representation() - _p2.get_representation().dot(x_) * x_)
                .normalized()),
         z_(x_.cross(y_)) {
@@ -60,13 +62,14 @@ public:
     double x = p.dot(x_);
     double y = p.dot(y_);
     double z = p.dot(z_);
-    std::cout << "x " << x << " y " << y << " z " << z << std::endl;
+
     double inclination = std::acos(z);
     double azimuth = std::atan2(y, x);
     Eigen::Vector2d result;
     result << inclination, azimuth;
     return result;
   }
+
   bool in_domain(const S2 &_p) const {
     const Eigen::Vector3d &p = _p.get_representation();
     double x = p.dot(x_);
@@ -88,10 +91,12 @@ public:
     result(0, 1) = dacos * z_(1);
     result(0, 2) = dacos * z_(2);
 
-    double datan = x * x / (std::sqrt(x * x + y * y));
-    result(1, 0) = datan * z_(0);
-    result(1, 1) = datan * z_(1);
-    result(1, 2) = 0.0;
+    double datan_dx = -y / (x * x + y * y);
+    double datan_dy = x / (x * x + y * y);
+
+    result(1, 0) = datan_dx * x_(0) + datan_dy * y_(0);
+    result(1, 1) = datan_dx * x_(1) + datan_dy * y_(1);
+    result(1, 2) = datan_dx * x_(2) + datan_dy * y_(2);
 
     return result;
   }
@@ -106,10 +111,12 @@ private:
 
 public:
   Parametrization(const S2 &_p1, const S2 &_p2)
-      : x_(_p1.get_representation().normalized()),
+      : x_((0.5 * (_p1.get_representation() + _p2.get_representation()))
+               .normalized()),
         y_((_p2.get_representation() - _p2.get_representation().dot(x_) * x_)
                .normalized()),
         z_(x_.cross(y_)) {}
+
   S2 operator()(const Eigen::Vector2d &_x) const {
     const double &inclination = _x(0);
     const double &azimuth = _x(1);
@@ -117,7 +124,6 @@ public:
                             std::sin(azimuth) * std::sin(inclination) * y_ +
                             std::cos(inclination) * z_;
 
-    std::cout << "point =  " << point.transpose() << std::endl;
     return S2(point);
   }
 
@@ -125,47 +131,29 @@ public:
     const double &inclination = _x(0);
     const double &azimuth = _x(1);
     Eigen::Matrix<double, 3, 2> result;
-    /*
-        double x = p.dot(x_);
-        double y = p.dot(y_);
-        double z = p.dot(z_);
-        double dacos = x * x / (std::sqrt(x * x + y * y));
-        result(0, 0) = dacos * z_(0);
-        result(0, 1) = dacos * z_(1);
-        result(0, 2) = dacos * z_(2);
 
-        double datan = x * x / (std::sqrt(x * x + y * y));
-        result(1, 0) = datan * z_(0);
-        result(1, 1) = datan * z_(1);
-        result(1, 2) = 0.0;
-    */
+    result.leftCols(1) = std::cos(azimuth) * std::cos(inclination) * x_ +
+                         std::sin(azimuth) * std::cos(inclination) * y_ -
+                         std::sin(inclination) * z_;
+
+    result.rightCols(1) = -std::sin(azimuth) * std::sin(inclination) * x_ +
+                          std::cos(azimuth) * std::sin(inclination) * y_;
+
     return result;
   }
 };
 
-class S2Spline {
+Eigen::MatrixXd C1Continuity(gsplines::basis::Basis &_basis,
+                             std::vector<Parametrization> _params,
+                             Eigen::VectorXd &_time_intervals) {}
+
+class S2Spline : public gsplines::collocation::GLLSpline {
 private:
   Eigen::VectorXd coefficients_;
   Eigen::VectorXd domain_intervals_;
-  std::vector<Parametrization> parametrization_;
+  // std::vector<Parametrization> parametrization_;
 
 public:
-  std::vector<S2> operator()(const Eigen::VectorXd &_t) {
-    std::vector<long> idx(_t.size());
-    std::vector<long> idx_interval(_t.size());
-
-    std::vector<S2> result(_t.size());
-    std::iota(idx.begin(), idx.end(), 0);
-    stable_sort(idx.begin(), idx.end(),
-                [&_t](long i1, long i2) { return _t(i1) < _t(i2); });
-
-    Eigen::VectorXd buffer_(2);
-    for (const auto &i : idx) {
-      Eigen::Vector2d x;
-      result[i] = parametrization_[i](x);
-    }
-    return result;
-  }
 };
 
 TEST(Manifolds, Sphere) {
@@ -179,7 +167,20 @@ TEST(Manifolds, Sphere) {
   Chart chart(p1, p2);
   Parametrization param(p1, p2);
 
+  Eigen::Vector2d v;
+  v << M_PI_2, M_PI_2;
+
+  std::cout << "param diffeo \n " << param.diff(v) << "\n\n";
+  std::cout << "chart diffeo \n " << chart.diff(param(v)) << "\n\n";
+
+  std::cout << "d_param * d_chart  \n " << param.diff(v) * chart.diff(param(v))
+            << "\n\n";
+
+  std::cout << " d_chart * d_param \n " << chart.diff(param(v)) * param.diff(v)
+            << "\n\n";
+
   ASSERT_TRUE(param(chart(p2)) == p2);
+  ASSERT_LT((chart(param(v)) - v).norm(), 1.0e-9);
 }
 
 int main(int argc, char **argv) {
