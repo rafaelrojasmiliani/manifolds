@@ -88,9 +88,15 @@ public:
   virtual Eigen::Matrix<double, T::dim, T::tangent_repr_dim>
   diff(const T &x) const = 0;
 
-  Parametrization<T> inverse() = 0;
+  // virtual Parametrization<T> inverse() const = 0;
 };
 
-template <typename T> class Parametrization {};
+template <typename T> class Parametrization {
+  virtual T operator()(const Eigen::Matrix<double, T::dim, 1> &x) const = 0;
+  virtual Eigen::Matrix<double, T::tangent_repr_dim, T::dim>
+  diff(const Eigen::Matrix<double, T::dim, 1> &x) const = 0;
+
+  //  virtual Chart<T> inverse() const = 0;
+};
 
 } // namespace manifolds

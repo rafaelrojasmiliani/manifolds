@@ -1,6 +1,6 @@
 include(GoogleTest)
 link_directories(${PROJECT_SOURCE_DIR}/build)
-link_libraries(gtest pthread)
+link_libraries(gtest pthread gsplines manifolds)
 include_directories(PUBLIC ${PROJECT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS})
 
 file(GLOB_RECURSE test_list ${PROJECT_SOURCE_DIR}/tests/*.cpp)

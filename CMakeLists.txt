@@ -13,6 +13,13 @@ set(PYTHON_VERSION
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # include ifopt with custon ROS installation
 find_package(Eigen3 REQUIRED)
+add_library(manifolds SHARED ${PROJECT_SOURCE_DIR}/src/Sphere.cpp)
+
+target_include_directories(
+  manifolds
+  PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include> ${Eigen3_INCLUDE_DIRS}
+         /usr/include/eigen3)
 
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   enable_testing()
