@@ -3,7 +3,10 @@
 #include <Manifolds/Topology/Open.hpp>
 namespace manifolds {
 
-template <typename R, long Dim, typename T, long TDim> class Manifold {
+class ManifoldBase {};
+
+template <typename R, long Dim, typename T, long TDim>
+class Manifold : public ManifoldBase {
 protected:
   R representation_;
 
