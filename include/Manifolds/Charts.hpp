@@ -3,60 +3,33 @@
 #include <Manifolds/Map.hpp>
 namespace manifolds {
 
-template <typename Manifold> class Parametrization;
-
-template <typename DomainT>
-class Chart : public Map<DomainT, Eigen::Matrix<double, DomainT::dim, 1>> {
-
-  friend DomainT;
-
-private:
-  typedef Eigen::Matrix<double, DomainT::dim, 1> Rn;
-  typedef Eigen::Matrix<double, DomainT::dim, DomainT::dim> Rnxn;
-
-  typedef std::function<Rn(const DomainT &)> chart_function_t;
-
-  typedef std::function<DomainT(const Rn &)> parametrization_function_t;
-
-  typedef std::function<Rnxn(const DomainT &)> char_differential_;
-
-  chart_function_t chart_;
-  parametrization_function_t parametrization_;
+template <typename Manifold>
+class Chart : public Map<Manifold, MatrixManifold<Manifold::dim, 1>> {
 
 public:
-  typedef Eigen::Matrix<double, DomainT::dim, 1> Codomain;
+  Chart() = default;
+  Chart(const Chart &) = default;
+  Chart(Chart &&) = default;
 
-  Chart(std::function<Codomain(const DomainT &)> _fun,
-        topology::CartensianInterval<DomainT::dim>);
-
-  virtual Codomain operator()(const DomainT &_domain) const = 0;
-
-  virtual Parametrization<DomainT> inverse() const = 0;
+  //  MatrixManifold<Manifold::dim, 1>
+  //  operator()(const Manifold &_in) const override {
+  //    return MatrixManifold<Manifold::dim, 1>(value_impl(_in));
+  //  }
 };
 
 template <typename Manifold>
-class Parametrization
-    : public Map<Eigen::Matrix<double, Manifold::dim, 1>, Manifold> {
-private:
-  std::function<Manifold(const Eigen::Matrix<double, Manifold::dim, 1> &)>
-      param_;
-
-  topology::CartensianInterval<Manifold::dim> domain_;
+class Parametrization : public Map<MatrixManifold<Manifold::dim, 1>, Manifold> {
 
 public:
-  Parametrization(const std::function<Manifold(
-                      const Eigen::Matrix<double, Manifold::dim, 1> &)> &_param,
-                  const topology::CartensianInterval<Manifold::dim> &_domain)
-
-      : param_(_param), domain_(_domain) {}
-  Manifold operator()(const Eigen::Matrix<double, Manifold::dim, 1> &_in) {
-    if (not domain_.contains(_in))
-      throw std::invalid_argument("");
-    return param_(_in);
-  }
-
-  bool in_domain(const Eigen::Matrix<double, Manifold::dim, 1> &_in) {
-    return domain_.contains(_in);
-  }
+  Parametrization() = default;
+  Parametrization(const Parametrization &) = default;
+  Parametrization(Parametrization &&) = default;
+  //  Manifold
+  //  operator()(const MatrixManifold<Manifold::dim, 1> &_in) const override {
+  //    return value_impl(_in.repr());
+  //  }
+  //
+  //  virtual Manifold value_impl(const Eigen::Matrix<double, 2, 1> &_in) const
+  //  = 0;
 };
 } // namespace manifolds

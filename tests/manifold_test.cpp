@@ -7,6 +7,21 @@
 #include <cmath>
 #include <unordered_map>
 
+using namespace manifolds;
+
+void test(const R3ConstRef &_in) {
+  std::cout << _in.repr().transpose() << "\n";
+}
+
+TEST(Manifolds, VectorManifolds) {
+
+  R3 a;
+  Eigen::Vector3d v;
+  v = a;
+  v << 1, 2, 3;
+  test(v);
+}
+
 /* Test that we get the correct basis*/
 /*
 using namespace manifolds;
