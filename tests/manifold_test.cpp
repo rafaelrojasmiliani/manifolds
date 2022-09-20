@@ -10,7 +10,7 @@
 using namespace manifolds;
 
 void test(const R3ConstRef &_in) {
-  std::cout << _in.repr().transpose() << "\n";
+  std::cout << _in.crepr().transpose() << "\n";
 }
 
 TEST(Manifolds, VectorManifolds) {

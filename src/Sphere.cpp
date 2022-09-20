@@ -7,12 +7,12 @@ S2::S2(const Eigen::Vector3d &_vec)
 S2::S2() : ManifoldInheritanceHelper(Eigen::Vector3d::Random().normalized()) {}
 
 S2Chart::S2Chart(const S2 &_p1, const S2 &_p2)
-    : x_((0.5 * (_p1.repr() + _p2.repr())).normalized()),
-      y_((_p2.repr() - _p2.repr().dot(x_) * x_).normalized()),
+    : x_((0.5 * (_p1.crepr() + _p2.crepr())).normalized()),
+      y_((_p2.crepr() - _p2.crepr().dot(x_) * x_).normalized()),
       z_(x_.cross(y_)) {}
 
 bool S2::operator==(const S2 &_other) const {
-  Eigen::Vector3d err = _other.repr() - repr();
+  Eigen::Vector3d err = _other.crepr() - crepr();
   return err.norm() < 1.0e-9;
 }
 
@@ -51,8 +51,8 @@ bool S2Chart::diff_from_repr(const Eigen::Vector3d &p,
 }
 
 S2Param::S2Param(const S2 &_p1, const S2 &_p2)
-    : x_((0.5 * (_p1.repr() + _p2.repr())).normalized()),
-      y_((_p2.repr() - _p2.repr().dot(x_) * x_).normalized()),
+    : x_((0.5 * (_p1.crepr() + _p2.crepr())).normalized()),
+      y_((_p2.crepr() - _p2.crepr().dot(x_) * x_).normalized()),
       z_(x_.cross(y_)) {}
 
 bool S2Param::value_on_repr(const Eigen::Vector2d &_x,

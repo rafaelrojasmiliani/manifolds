@@ -41,7 +41,7 @@ public:
   }
 
   bool value(const DomainType &_in, CoDomainType &_out) const {
-    return value_on_repr(_in.repr(), _out.repr());
+    return value_on_repr(_in.crepr(), _out.repr());
   }
 
   CoDomainType operator()(const DomainType &_in) const {
@@ -65,13 +65,13 @@ private:
   bool value_impl(const ManifoldBase *_in,
                   ManifoldBase *_other) const override {
 
-    return value_on_repr(static_cast<const DomainType *>(_in)->repr(),
+    return value_on_repr(static_cast<const DomainType *>(_in)->crepr(),
                          static_cast<CoDomainType *>(_other)->repr());
   }
   bool diff_impl(const ManifoldBase *_in,
                  Eigen::MatrixXd &_mat) const override {
 
-    return diff_from_repr(static_cast<const DomainType *>(_in)->repr(), _mat);
+    return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
   }
   Domain_t *domain_buffer_impl() const override { return new Domain_t(); }
   Codomain_t *codomain_buffer_impl() const override { return new Codomain_t(); }

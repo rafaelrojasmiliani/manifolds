@@ -73,7 +73,7 @@ public:
   static const long dim = Dim;
   static const long tangent_repr_dim = TDim;
   typedef R Representation;
-  const std::decay_t<R> &repr() const { return representation_; };
+  const std::decay_t<R> &crepr() const { return representation_; };
   virtual std::size_t get_dim() const override { return dim; }
 
 private:
