@@ -53,6 +53,15 @@ public:
     value(_in, _out);
     return true;
   }
+  Eigen::MatrixXd diff(const DomainType &_in) const {
+    Eigen::MatrixXd result = linearization_buffer();
+    diff(_in, result);
+    return result;
+  }
+
+  bool diff(const DomainType &_in, Eigen::MatrixXd &_out) const {
+    return diff_from_repr(_in.crepr(), _out);
+  }
   /*
     template <typename OtherDomainType>
     MapComposition<CoDomainType, OtherDomainType>
@@ -60,6 +69,27 @@ public:
       return MapComposition<CoDomainType, DomainType>(*this).compose(_in);
     }
     */
+
+  virtual std::size_t get_dom_dim() const override {
+    // if (DomainType::dim == Eigen::Dynamic)
+    //    throw std::invalid_input
+    return DomainType::dim;
+  }
+  virtual std::size_t get_codom_dim() const override {
+    // if (CoDomainType::dim == Eigen::Dynamic)
+    //    throw std::invalid_input
+    return CoDomainType::dim;
+  }
+  virtual std::size_t get_dom_tangent_repr_dim() const override {
+    // if (DomainType::dim == Eigen::Dynamic)
+    //    throw std::invalid_input
+    return DomainType::tangent_repr_dim;
+  }
+  virtual std::size_t get_codom_tangent_repr_dim() const override {
+    // if (CoDomainType::dim == Eigen::Dynamic)
+    //    throw std::invalid_input
+    return CoDomainType::tangent_repr_dim;
+  }
 
 private:
   bool value_impl(const ManifoldBase *_in,

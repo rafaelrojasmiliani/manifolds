@@ -23,6 +23,7 @@ public:
   }
 
   virtual std::size_t get_dim() const = 0;
+  virtual std::size_t get_tanget_repr_dim() const = 0;
 
   virtual ~ManifoldBase() = default;
   ManifoldBase(const ManifoldBase &) = default;
@@ -75,6 +76,9 @@ public:
   typedef R Representation;
   const std::decay_t<R> &crepr() const { return representation_; };
   virtual std::size_t get_dim() const override { return dim; }
+  virtual std::size_t get_tanget_repr_dim() const override {
+    return tangent_repr_dim;
+  }
 
 private:
   void assign(const std::unique_ptr<ManifoldBase> &_other) override {

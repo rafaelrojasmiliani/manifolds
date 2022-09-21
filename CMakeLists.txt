@@ -13,7 +13,11 @@ set(PYTHON_VERSION
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # include ifopt with custon ROS installation
 find_package(Eigen3 REQUIRED)
-add_library(manifolds SHARED ${PROJECT_SOURCE_DIR}/src/Sphere.cpp)
+add_library(
+  manifolds SHARED
+  ${PROJECT_SOURCE_DIR}/src/Sphere.cpp ${PROJECT_SOURCE_DIR}/src/MapBase.cpp
+  ${PROJECT_SOURCE_DIR}/src/MapComposition.cpp #
+)
 
 target_include_directories(
   manifolds
