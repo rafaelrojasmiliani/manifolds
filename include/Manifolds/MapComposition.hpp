@@ -1,40 +1,46 @@
 #pragma once
-#include <Manifolds/MapBase.hpp>
+#include <Manifolds/Map.hpp>
+#include <Manifolds/MapBaseComposition.hpp>
 namespace manifolds {
 
-class MapBaseComposition
-    : public AbstractMapInheritanceHelper<MapBaseComposition, MapBase> {
+template <typename DomainType, typename CoDomainType>
+class MapComposition : public AbstractMapInheritanceHelper<
+                           MapComposition<DomainType, CoDomainType>,
+                           Map<DomainType, CoDomainType>>,
+                       public MapBaseComposition {
 public:
-  MapBaseComposition() = delete;
-  MapBaseComposition(const MapBaseComposition &_that);
-  MapBaseComposition(MapBaseComposition &&_that);
+  using MapBaseComposition::MapBaseComposition;
+  virtual ~MapComposition() = default;
 
-  MapBaseComposition(const MapBase &_in);
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(const MapComposition<DomainType, OtherDomainType> &_in) const & {
+    MapComposition<CoDomainType, OtherDomainType> result(*this);
+    result.append(_in);
+    return result;
+  }
 
-  MapBaseComposition(MapBase &&_in);
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(MapComposition<DomainType, OtherDomainType> &&_in) const & {
+    MapComposition<CoDomainType, OtherDomainType> result(*this);
+    result.append(std::move(_in));
+    return result;
+  }
 
-  MapBaseComposition(const std::vector<MapBase> &_in);
-
-  MapBaseComposition(std::vector<MapBase> &&_in);
-
-  virtual ~MapBaseComposition() = default;
-
-  void append(const MapBase &_in);
-  void append(MapBase &&_in);
-
-protected:
-  std::vector<std::unique_ptr<MapBase>> maps_;
-  mutable std::vector<std::unique_ptr<ManifoldBase>> codomain_buffers_;
-  mutable std::vector<Eigen::MatrixXd> matrix_buffers_;
-
-private:
-  bool value_impl(const ManifoldBase *_in, ManifoldBase *_other) const override;
-  bool diff_impl(const ManifoldBase *_in, Eigen::MatrixXd &_mat) const override;
-  std::size_t get_dom_dim() const override;
-  std::size_t get_codom_dim() const override;
-
-  std::size_t get_dom_tangent_repr_dim() const override;
-  std::size_t get_codom_tangent_repr_dim() const override;
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(const MapComposition<DomainType, OtherDomainType> &_in) && {
+    MapComposition<CoDomainType, OtherDomainType> result(std::move(*this));
+    result.append(_in);
+    return result;
+  }
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(MapComposition<DomainType, OtherDomainType> &&_in) && {
+    MapComposition<CoDomainType, OtherDomainType> result(std::move(*this));
+    result.append(std::move(_in));
+    return result;
+  }
 };
-
 } // namespace manifolds

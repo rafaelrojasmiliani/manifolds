@@ -16,7 +16,7 @@ find_package(Eigen3 REQUIRED)
 add_library(
   manifolds SHARED
   ${PROJECT_SOURCE_DIR}/src/Sphere.cpp ${PROJECT_SOURCE_DIR}/src/MapBase.cpp
-  ${PROJECT_SOURCE_DIR}/src/MapComposition.cpp #
+  ${PROJECT_SOURCE_DIR}/src/MapBaseComposition.cpp #
 )
 
 target_include_directories(

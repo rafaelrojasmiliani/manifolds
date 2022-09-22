@@ -14,7 +14,8 @@ namespace manifolds {
 template <typename DomainType, typename CoDomainType> class MapComposition;
 
 template <typename DomainType, typename CoDomainType>
-class Map : public MapBase {
+class Map : public AbstractMapInheritanceHelper<Map<DomainType, CoDomainType>,
+                                                MapBase> {
 public:
   using Domain_t = DomainType;
   using Codomain_t = CoDomainType;
@@ -25,14 +26,6 @@ public:
   Map(Map &&_that) = default;
   virtual ~Map() = default;
 
-  // Default clone
-  std::unique_ptr<Map<DomainType, CoDomainType>> clone() const {
-    return std::unique_ptr<MapBase>(clone_impl());
-  }
-
-  std::unique_ptr<Map<DomainType, CoDomainType>> move_clone() {
-    return std::unique_ptr<MapBase>(move_clone_impl());
-  }
   // behaviur
   CoDomainType value(const DomainType &_in) const {
     CoDomainType result;
@@ -54,7 +47,7 @@ public:
     return true;
   }
   Eigen::MatrixXd diff(const DomainType &_in) const {
-    Eigen::MatrixXd result = linearization_buffer();
+    Eigen::MatrixXd result = this->linearization_buffer();
     diff(_in, result);
     return result;
   }
@@ -113,58 +106,5 @@ protected:
   virtual bool diff_from_repr(const typename DomainType::Representation &_in,
                               Eigen::MatrixXd &_mat) const = 0;
 };
-/*
-template <typename DomainType, typename CoDomainType>
-class MapComposition
-    : public MapInheritanceHelper<MapComposition<DomainType, CoDomainType>,
-                                  Map<DomainType, CoDomainType>>,
-      public MapBaseComposition {
-public:
-  using MapBaseComposition::MapBaseComposition;
-  virtual ~MapComposition() = default;
 
-  bool value(const DomainType &_in) const {
-    return std::unique_ptr<CoDomainType>(static_cast<CoDomainType *>(
-        this->value_ptr_impl(static_cast<const ManifoldBase &>(_in))));
-  }
-  virtual bool value(const DomainType &_in, const CoDomainType &_result) {}
-
-  CoDomainType operator()(const DomainType &_in) const {
-    return *static_cast<CoDomainType *>(
-        this->value_ptr_impl(static_cast<const ManifoldBase &>(_in)));
-  }
-
-  template <typename OtherDomainType>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(const MapComposition<DomainType, OtherDomainType> &_in) const & {
-    MapComposition<CoDomainType, OtherDomainType> result(*this);
-    result.append(_in);
-    return result;
-  }
-
-  template <typename OtherDomainType>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(MapComposition<DomainType, OtherDomainType> &&_in) const & {
-    MapComposition<CoDomainType, OtherDomainType> result(*this);
-    result.append(std::move(_in));
-    return result;
-  }
-
-  template <typename OtherDomainType>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(const MapComposition<DomainType, OtherDomainType> &_in) && {
-    MapComposition<CoDomainType, OtherDomainType> result(std::move(*this));
-    result.append(_in);
-    return result;
-  }
-  template <typename OtherDomainType>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(MapComposition<DomainType, OtherDomainType> &&_in) && {
-    MapComposition<CoDomainType, OtherDomainType> result(std::move(*this));
-    result.append(std::move(_in));
-    return result;
-  }
-};
-*/
-//  virtual Chart<M> inverse() const = 0;
 }; // namespace manifolds

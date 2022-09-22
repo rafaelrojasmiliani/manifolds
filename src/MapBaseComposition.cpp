@@ -1,4 +1,4 @@
-#include <Manifolds/MapComposition.hpp>
+#include <Manifolds/MapBaseComposition.hpp>
 namespace manifolds {
 
 MapBaseComposition::MapBaseComposition(const MapBaseComposition &_that) {
@@ -17,21 +17,21 @@ MapBaseComposition::MapBaseComposition(MapBaseComposition &&_that) {
 }
 
 MapBaseComposition::MapBaseComposition(const MapBase &_in)
-    : AbstractMapInheritanceHelper(), maps_() {
+    : MapInheritanceHelper(), maps_() {
   maps_.push_back(_in.clone());
   codomain_buffers_.push_back(_in.codomain_buffer());
   matrix_buffers_.push_back(_in.linearization_buffer());
 }
 
 MapBaseComposition::MapBaseComposition(MapBase &&_in)
-    : AbstractMapInheritanceHelper(), maps_() {
+    : MapInheritanceHelper(), maps_() {
   codomain_buffers_.push_back(_in.codomain_buffer());
   matrix_buffers_.push_back(_in.linearization_buffer());
   maps_.push_back(_in.move_clone());
 }
 
 MapBaseComposition::MapBaseComposition(const std::vector<MapBase> &_in)
-    : AbstractMapInheritanceHelper(), maps_() {
+    : MapInheritanceHelper(), maps_() {
   for (const auto &map : _in) {
     maps_.push_back(map.clone());
     matrix_buffers_.push_back(map.linearization_buffer());
@@ -40,7 +40,7 @@ MapBaseComposition::MapBaseComposition(const std::vector<MapBase> &_in)
 }
 
 MapBaseComposition::MapBaseComposition(std::vector<MapBase> &&_in)
-    : AbstractMapInheritanceHelper(), maps_() {
+    : MapInheritanceHelper(), maps_() {
   for (auto &map : _in) {
     codomain_buffers_.push_back(map.codomain_buffer());
     matrix_buffers_.push_back(map.linearization_buffer());
@@ -114,5 +114,12 @@ std::size_t MapBaseComposition::get_dom_tangent_repr_dim() const {
 }
 std::size_t MapBaseComposition::get_codom_tangent_repr_dim() const {
   return maps_.front()->get_codom_dim();
+}
+
+ManifoldBase *MapBaseComposition::domain_buffer_impl() const {
+  return maps_.back()->domain_buffer().release();
+}
+ManifoldBase *MapBaseComposition::codomain_buffer_impl() const {
+  return maps_.front()->codomain_buffer().release();
 }
 } // namespace manifolds
