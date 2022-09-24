@@ -9,11 +9,14 @@
 
 using namespace manifolds;
 
-TEST(Manifolds, VectorManifolds) {
+TEST(Manifolds, FaithfullManifolds) {
 
   R3 a;
+  auto fun = [](Eigen::Vector3d &v) { v(0) = 0; };
+  fun(a);
   Eigen::Vector3d v;
-  v = static_cast<const Eigen::Vector3d &>(a);
+  v = a;
+  a = v;
   v << 1, 2, 3;
 }
 

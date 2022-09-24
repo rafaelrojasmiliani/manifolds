@@ -37,11 +37,13 @@ public:
     return value_on_repr(_in.crepr(), _out.repr());
   }
 
+  // template<bool IF= not DomainType::is_faithfull>
   CoDomainType operator()(const DomainType &_in) const {
     CoDomainType result;
     value(_in, result);
     return result;
   }
+
   bool operator()(const DomainType &_in, CoDomainType &_out) const {
     value(_in, _out);
     return true;
@@ -96,8 +98,12 @@ private:
 
     return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
   }
-  Domain_t *domain_buffer_impl() const override { return new Domain_t(); }
-  Codomain_t *codomain_buffer_impl() const override { return new Codomain_t(); }
+  virtual Domain_t *domain_buffer_impl() const override {
+    return new Domain_t();
+  }
+  virtual Codomain_t *codomain_buffer_impl() const override {
+    return new Codomain_t();
+  }
 
 protected:
   virtual bool

@@ -15,8 +15,10 @@ protected:
 
 public:
   // Generic constructor
-  template <typename... Ts>
-  Manifold(Ts &&... args) : representation_(std::forward<Ts>(args)...) {}
+  Manifold(const R &_in) : representation_(_in) {}
+  Manifold() : representation_() {}
+  Manifold(R &&_in) : representation_(std::move(_in)) {}
+  virtual ~Manifold() = default;
   // Static const calues
   static const long dim = Dim;
   static const long tangent_repr_dim = TDim;
@@ -36,7 +38,7 @@ public:
     return representation_;
   }
 
-  template <bool F = Faithfull> operator std::enable_if_t<F, R>() & {
+  template <bool F = Faithfull> operator std::enable_if_t<F, R> &() & {
     return representation_;
   }
 
@@ -49,12 +51,13 @@ public:
    const Manifold &operator=(const Manifold<R, Dim, TDim, Faithfull> &_other) {
      representation_ = _other.crepr();
    }
+ */
   template <bool F = Faithfull>
   std::enable_if_t<F, Manifold<R, Dim, TDim, Faithfull>> &
-  operator=(const std::decay_t<R> &_other) {
+  operator=(const R &_other) {
     representation_ = _other;
+    return *this;
   }
- */
 
 private:
   void assign(const std::unique_ptr<ManifoldBase> &_other) override {
