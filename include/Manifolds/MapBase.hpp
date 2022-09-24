@@ -1,5 +1,5 @@
 #pragma once
-#include <Manifolds/Manifold.hpp>
+#include <Manifolds/ManifoldBase.hpp>
 #include <memory>
 #include <variant>
 

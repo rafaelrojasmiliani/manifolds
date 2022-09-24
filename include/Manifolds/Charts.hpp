@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Manifolds/LinearManifolds.hpp>
 #include <Manifolds/Map.hpp>
 namespace manifolds {
 

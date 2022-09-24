@@ -1,4 +1,4 @@
-#include <Manifolds/Manifold.hpp>
+#include <Manifolds/LinearManifolds.hpp>
 
 #include <gtest/gtest.h>
 
@@ -9,17 +9,12 @@
 
 using namespace manifolds;
 
-void test(const R3ConstRef &_in) {
-  std::cout << _in.crepr().transpose() << "\n";
-}
-
 TEST(Manifolds, VectorManifolds) {
 
   R3 a;
   Eigen::Vector3d v;
-  v = a;
+  v = static_cast<const Eigen::Vector3d &>(a);
   v << 1, 2, 3;
-  test(v);
 }
 
 /* Test that we get the correct basis*/
