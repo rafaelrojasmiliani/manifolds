@@ -13,9 +13,9 @@ public:
 
   MapBaseComposition(MapBase &&_in);
 
-  MapBaseComposition(const std::vector<MapBase> &_in);
+  MapBaseComposition(const std::vector<std::unique_ptr<MapBase>> &_in);
 
-  MapBaseComposition(std::vector<MapBase> &&_in);
+  MapBaseComposition(std::vector<std::unique_ptr<MapBase>> &&_in);
 
   virtual ~MapBaseComposition() = default;
 

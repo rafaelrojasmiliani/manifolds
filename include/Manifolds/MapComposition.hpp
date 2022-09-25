@@ -1,7 +1,10 @@
 #pragma once
-#include <Manifolds/Map.hpp>
+////#include <Manifolds/Map.hpp>
 #include <Manifolds/MapBaseComposition.hpp>
+
 namespace manifolds {
+
+template <typename DomainType, typename CoDomainType> class Map;
 
 template <typename DomainType, typename CoDomainType>
 class MapComposition : public AbstractMapInheritanceHelper<

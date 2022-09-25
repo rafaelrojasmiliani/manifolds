@@ -30,22 +30,24 @@ MapBaseComposition::MapBaseComposition(MapBase &&_in)
   maps_.push_back(_in.move_clone());
 }
 
-MapBaseComposition::MapBaseComposition(const std::vector<MapBase> &_in)
+MapBaseComposition::MapBaseComposition(
+    const std::vector<std::unique_ptr<MapBase>> &_in)
     : MapInheritanceHelper(), maps_() {
   std::vector<MapBase> res;
   for (const auto &map : _in) {
-    maps_.push_back(map.clone());
-    matrix_buffers_.push_back(map.linearization_buffer());
-    codomain_buffers_.push_back(map.codomain_buffer());
+    maps_.push_back(map->clone());
+    matrix_buffers_.push_back(map->linearization_buffer());
+    codomain_buffers_.push_back(map->codomain_buffer());
   }
 }
 
-MapBaseComposition::MapBaseComposition(std::vector<MapBase> &&_in)
+MapBaseComposition::MapBaseComposition(
+    std::vector<std::unique_ptr<MapBase>> &&_in)
     : MapInheritanceHelper(), maps_() {
   for (auto &map : _in) {
-    codomain_buffers_.push_back(map.codomain_buffer());
-    matrix_buffers_.push_back(map.linearization_buffer());
-    maps_.push_back(map.move_clone());
+    codomain_buffers_.push_back(map->codomain_buffer());
+    matrix_buffers_.push_back(map->linearization_buffer());
+    maps_.push_back(map->move_clone());
   }
 }
 

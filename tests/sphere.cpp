@@ -38,7 +38,7 @@ TEST(Manifolds, Sphere) {
       ASSERT_TRUE(param(chart(p2)) == p2);
       auto p = param(coordinate);
       auto x = chart(p);
-      ASSERT_LT((x.crepr() - coordinate).norm(), 1.0e-9);
+      ASSERT_LT((x - coordinate).norm(), 1.0e-9);
       auto m1 = chart.diff(p);
       auto m2 = param.diff(x);
       ASSERT_LT((m1 * m2 - Eigen::MatrixXd::Identity(2, 2)).norm(), 1.0e-4);

@@ -2,7 +2,7 @@
 
 #include <Manifolds/Manifold.hpp>
 #include <Manifolds/MapBase.hpp>
-//#include <Manifolds/MapComposition.hpp>
+#include <Manifolds/MapComposition.hpp>
 
 #include <Eigen/Core>
 #include <algorithm>
@@ -26,36 +26,168 @@ public:
   Map(Map &&_that) = default;
   virtual ~Map() = default;
 
-  // behaviur
-  CoDomainType value(const DomainType &_in) const {
+  // Defintioon of out value(in)
+  template <bool F = (not CoDomainType::is_faithfull and
+                      not DomainType::is_faithfull)>
+  std::enable_if_t<F, CoDomainType> value(const DomainType &_in) const {
     CoDomainType result;
     value(_in, result);
     return result;
   }
 
-  bool value(const DomainType &_in, CoDomainType &_out) const {
+  template <bool F = (DomainType::is_faithfull and
+                      not CoDomainType::is_faithfull)>
+  std::enable_if_t<F, CoDomainType>
+  value(const typename DomainType::Representation &_in) const {
+    CoDomainType result;
+    value(_in, result);
+    return result;
+  }
+
+  template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
+  std::enable_if_t<F, typename CoDomainType::Representation>
+  value(const typename DomainType::Representation &_in) const {
+    typename CoDomainType::Representation result;
+    value(_in, result);
+    return result;
+  }
+  template <bool F = (not DomainType::is_faithfull and
+                      CoDomainType::is_faithfull)>
+  std::enable_if_t<F, typename CoDomainType::Representation>
+  value(const DomainType &_in) const {
+    typename CoDomainType::Representation result;
+    value(_in, result);
+    return result;
+  }
+  // ---------------------------------
+  // Defintion of bool value(in, out)
+  // ---------------------------------
+  template <bool F = (not DomainType::is_faithfull and
+                      not CoDomainType::is_faithfull)>
+  std::enable_if_t<F, bool> value(const DomainType &_in,
+                                  CoDomainType &_out) const {
     return value_on_repr(_in.crepr(), _out.repr());
   }
-
-  // template<bool IF= not DomainType::is_faithfull>
-  CoDomainType operator()(const DomainType &_in) const {
-    CoDomainType result;
-    value(_in, result);
-    return result;
+  template <bool F = (DomainType::is_faithfull and
+                      not CoDomainType::is_faithfull)>
+  std::enable_if_t<F, bool>
+  value(const typename DomainType::Representation &_in,
+        CoDomainType &_out) const {
+    return value_on_repr(_in, _out.repr());
   }
 
-  bool operator()(const DomainType &_in, CoDomainType &_out) const {
+  template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
+  std::enable_if_t<F, bool>
+  value(const typename DomainType::Representation &_in,
+        typename CoDomainType::Representation &_out) const {
+    return value_on_repr(_in, _out);
+  }
+  template <bool F = (not DomainType::is_faithfull and
+                      CoDomainType::is_faithfull)>
+  std::enable_if_t<F, bool>
+  value(const DomainType &_in,
+        typename CoDomainType::Representation &_out) const {
+    return value_on_repr(_in.crepr(), _out);
+  }
+
+  // ---------------------------------
+  // Defintion of bool operator(in, out)
+  // ---------------------------------
+  template <bool F = (not CoDomainType::is_faithfull and
+                      not DomainType::is_faithfull)>
+  std::enable_if_t<F, bool> operator()(const DomainType &_in,
+                                       CoDomainType &_out) const {
     value(_in, _out);
     return true;
   }
+
+  template <bool F = (DomainType::is_faithfull and
+                      not CoDomainType::is_faithfull)>
+  std::enable_if_t<F, bool>
+  operator()(const typename DomainType::Representation &_in,
+             CoDomainType &_out) const {
+    value(_in, _out);
+    return true;
+  }
+  template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
+  std::enable_if_t<F, bool>
+  operator()(const typename DomainType::Representation &_in,
+             typename CoDomainType::Representation &_out) const {
+    return value(_in, _out);
+  }
+
+  template <bool F = (not DomainType::is_faithfull and
+                      CoDomainType::is_faithfull)>
+  std::enable_if_t<F, bool>
+  operator()(const DomainType &_in,
+             typename CoDomainType::Representation &_out) const {
+    return value(_in, _out);
+  }
+
+  // ---------------------------------
+  // Defintion of out operator(in)
+  // ---------------------------------
+  template <bool F = (not CoDomainType::is_faithfull and
+                      not DomainType::is_faithfull)>
+  std::enable_if_t<F, CoDomainType> operator()(const DomainType &_in) const {
+    CoDomainType result;
+    value(_in, result);
+    return result;
+  }
+  template <bool F = (DomainType::is_faithfull and
+                      not CoDomainType::is_faithfull)>
+  std::enable_if_t<F, CoDomainType>
+  operator()(const typename DomainType::Representation &_in) const {
+    CoDomainType result;
+    value(_in, result);
+    return result;
+  }
+  template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
+  std::enable_if_t<F, typename CoDomainType::Representation>
+  operator()(const typename DomainType::Representation &_in) const {
+    typename CoDomainType::Representation result;
+    value(_in, result);
+    return result;
+  }
+
+  template <bool F = (not DomainType::is_faithfull and
+                      CoDomainType::is_faithfull)>
+  std::enable_if_t<F, typename CoDomainType::Representation>
+  operator()(const DomainType &_in) const {
+    typename CoDomainType::Representation result;
+    value(_in, result);
+    return result;
+  }
+
+  // ---------------------------------
+  // Defintion of out diff(in)
+  // ---------------------------------
+  template <bool F = (not DomainType::is_faithfull)>
   Eigen::MatrixXd diff(const DomainType &_in) const {
     Eigen::MatrixXd result = this->linearization_buffer();
     diff(_in, result);
     return result;
   }
 
-  bool diff(const DomainType &_in, Eigen::MatrixXd &_out) const {
+  template <bool F = (DomainType::is_faithfull)>
+  Eigen::MatrixXd diff(const typename DomainType::Representation &_in) const {
+    Eigen::MatrixXd result = this->linearization_buffer();
+    diff(_in, result);
+    return result;
+  }
+
+  // ---------------------------------
+  // Defintion of bool diff(in, out)
+  // ---------------------------------
+  template <bool F = (not DomainType::is_faithfull)>
+  std::enable_if_t<F, bool> diff(const DomainType &_in,
+                                 Eigen::MatrixXd &_out) const {
     return diff_from_repr(_in.crepr(), _out);
+  }
+  template <bool F = DomainType::is_faithfull>
+  std::enable_if_t<F, bool> diff(const typename DomainType::Representation &_in,
+                                 Eigen::MatrixXd &_out) const {
+    return diff_from_repr(_in, _out);
   }
   /*
     template <typename OtherDomainType>
