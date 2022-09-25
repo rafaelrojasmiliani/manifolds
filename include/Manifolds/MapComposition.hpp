@@ -10,6 +10,7 @@ class MapComposition : public AbstractMapInheritanceHelper<
                        public MapBaseComposition {
 public:
   using MapBaseComposition::MapBaseComposition;
+
   virtual ~MapComposition() = default;
 
   template <typename OtherDomainType>

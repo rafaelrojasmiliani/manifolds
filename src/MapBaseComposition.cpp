@@ -32,6 +32,7 @@ MapBaseComposition::MapBaseComposition(MapBase &&_in)
 
 MapBaseComposition::MapBaseComposition(const std::vector<MapBase> &_in)
     : MapInheritanceHelper(), maps_() {
+  std::vector<MapBase> res;
   for (const auto &map : _in) {
     maps_.push_back(map.clone());
     matrix_buffers_.push_back(map.linearization_buffer());

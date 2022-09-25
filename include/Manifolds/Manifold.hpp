@@ -59,6 +59,13 @@ public:
     return *this;
   }
 
+  template <bool F = Faithfull>
+  std::enable_if_t<F, Manifold<R, Dim, TDim, Faithfull>> &
+  operator=(R &&_other) {
+    representation_ = std::move(_other);
+    return *this;
+  }
+
 private:
   void assign(const std::unique_ptr<ManifoldBase> &_other) override {
     representation_ =
