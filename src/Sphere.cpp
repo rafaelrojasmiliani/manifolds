@@ -81,4 +81,15 @@ bool S2Param::diff_from_repr(const Eigen::Vector2d &_x,
   return true;
 }
 
+bool AntipodalMap::value_on_repr(const Eigen::Vector3d &_x,
+                                 Eigen::Vector3d &_p) const {
+  _p.noalias() = -_x;
+  return true;
+}
+bool AntipodalMap::diff_from_repr(const Eigen::Vector3d &,
+                                  Eigen::MatrixXd &_mat) const {
+  _mat = -Eigen::MatrixXd::Identity(3, 3);
+  return true;
+}
+
 } // namespace manifolds

@@ -31,8 +31,13 @@ public:
   using base_class_t::operator=;
 };
 
+template <int N> struct footype { typedef MatrixManifold<N, 1> type; };
+template <> struct footype<1> { typedef Manifold<double, 1, 1, true> type; };
+
 using Rn = MatrixManifold<Eigen::Dynamic, 1>;
-using R = MatrixManifold<1, 1>;
+
+template <long N = 1> using Reals = typename footype<N>::type;
+
 using R2 = MatrixManifold<2, 1>;
 using R3 = MatrixManifold<3, 1>;
 

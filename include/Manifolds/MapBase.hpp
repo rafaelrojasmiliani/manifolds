@@ -84,6 +84,8 @@ template <typename Current, typename Base>
 class AbstractMapInheritanceHelper : public Base {
 public:
   using Base::Base;
+  AbstractMapInheritanceHelper(const AbstractMapInheritanceHelper &) = default;
+  AbstractMapInheritanceHelper(AbstractMapInheritanceHelper &&) = default;
   virtual ~AbstractMapInheritanceHelper() = default;
 
   std::unique_ptr<Current> clone() const {

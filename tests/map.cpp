@@ -1,5 +1,6 @@
 
 #include <Eigen/Core>
+#include <Manifolds/LinearManifolds.hpp>
 #include <Manifolds/Map.hpp>
 #include <gtest/gtest.h>
 
@@ -16,8 +17,6 @@
  *
  * */
 using namespace manifolds;
-
-using Reals = Manifold<double, 1, 1>;
 
 template <typename Set>
 class Identity : public MapInheritanceHelper<Identity<Set>, Map<Set, Set>> {
@@ -46,10 +45,10 @@ private:
 
 TEST(Map, Identity) {
 
-  Identity<Reals> id;
+  Identity<Reals<1>> id;
 
-  Reals p(3);
-  Reals p2 = id(p);
+  Reals<1> p(3);
+  Reals<1> p2 = id(p);
 }
 
 int main(int argc, char **argv) {

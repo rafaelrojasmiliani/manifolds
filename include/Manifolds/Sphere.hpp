@@ -5,12 +5,17 @@
 #include <Manifolds/Manifold.hpp>
 namespace manifolds {
 
+class S2Chart;
+class S2Param;
 class S2
     : public ManifoldInheritanceHelper<S2, Manifold<Eigen::Vector3d, 2, 3>> {
 public:
   S2();
   S2(const Eigen::Vector3d &_vec);
   bool operator==(const S2 &_other) const;
+
+  using Chart = S2Chart;
+  using Parametrization = S2Param;
 };
 
 class S2Chart : public MapInheritanceHelper<S2Chart, Chart<S2>> {
@@ -48,5 +53,16 @@ private:
                       Eigen::MatrixXd &_mat) const override;
 
   // Chart<S2> inverse() const;
+};
+
+class AntipodalMap : public MapInheritanceHelper<AntipodalMap, Map<S2, S2>> {
+public:
+  using MapInheritanceHelper<AntipodalMap, Map<S2, S2>>::MapInheritanceHelper;
+
+private:
+  bool value_on_repr(const Eigen::Vector3d &_x,
+                     Eigen::Vector3d &_p) const override;
+  bool diff_from_repr(const Eigen::Vector3d &_in,
+                      Eigen::MatrixXd &_mat) const override;
 };
 } // namespace manifolds
