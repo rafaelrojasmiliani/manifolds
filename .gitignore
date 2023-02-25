@@ -15,3 +15,6 @@ compile_commands.json
 tests/CMakeCache.txt
 tests/CMakeFiles/*
 tests/Testing/*
+cmake-*
+generation_tests/*
+.cache/*
