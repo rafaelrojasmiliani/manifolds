@@ -16,7 +16,6 @@ class Sphere(Atlas):
     rows = manifold.rows_
     coordinates_bounds = [[0, 3.1], [-3.1, 3.1]]
     cpp_repr_type = 'Eigen::Vector3d'
-    cpp_coordinates_type = 'Eigen::Vector2d'
 
     def __init__(self):
         pass
