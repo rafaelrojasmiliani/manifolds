@@ -20,6 +20,10 @@ public:
   using Domain_t = DomainType;
   using Codomain_t = CoDomainType;
 
+  using Differential_t =
+      Eigen::Matrix<double, Codomain_t::tangent_repr_dimension,
+                    Domain_t::tangent_repr_dimension>;
+
   // Default lifecycle
   Map() = default;
   Map(const Map &_that) = default;
@@ -163,14 +167,16 @@ public:
   // Defintion of out diff(in)
   // ---------------------------------
   template <bool F = (not DomainType::is_faithfull)>
-  Eigen::MatrixXd diff(const DomainType &_in) const {
+  std::enable_if_t<F, typename Eigen::MatrixXd>
+  diff(const DomainType &_in) const {
     Eigen::MatrixXd result = this->linearization_buffer();
     diff(_in, result);
     return result;
   }
 
   template <bool F = (DomainType::is_faithfull)>
-  Eigen::MatrixXd diff(const typename DomainType::Representation &_in) const {
+  std::enable_if_t<F, typename Eigen::MatrixXd>
+  diff(const typename DomainType::Representation &_in) const {
     Eigen::MatrixXd result = this->linearization_buffer();
     diff(_in, result);
     return result;
@@ -181,12 +187,12 @@ public:
   // ---------------------------------
   template <bool F = (not DomainType::is_faithfull)>
   std::enable_if_t<F, bool> diff(const DomainType &_in,
-                                 Eigen::MatrixXd &_out) const {
+                                 Eigen::Ref<Eigen::MatrixXd> _out) const {
     return diff_from_repr(_in.crepr(), _out);
   }
   template <bool F = DomainType::is_faithfull>
   std::enable_if_t<F, bool> diff(const typename DomainType::Representation &_in,
-                                 Eigen::MatrixXd &_out) const {
+                                 Eigen::Ref<Eigen::MatrixXd> _out) const {
     return diff_from_repr(_in, _out);
   }
   /*
@@ -200,22 +206,22 @@ public:
   virtual std::size_t get_dom_dim() const override {
     // if (DomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
-    return DomainType::dim;
+    return DomainType::dimension;
   }
   virtual std::size_t get_codom_dim() const override {
     // if (CoDomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
-    return CoDomainType::dim;
+    return CoDomainType::dimension;
   }
   virtual std::size_t get_dom_tangent_repr_dim() const override {
     // if (DomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
-    return DomainType::tangent_repr_dim;
+    return DomainType::tangent_repr_dimension;
   }
   virtual std::size_t get_codom_tangent_repr_dim() const override {
     // if (CoDomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
-    return CoDomainType::tangent_repr_dim;
+    return CoDomainType::tangent_repr_dimension;
   }
 
 private:
@@ -226,7 +232,7 @@ private:
                          static_cast<CoDomainType *>(_other)->repr());
   }
   bool diff_impl(const ManifoldBase *_in,
-                 Eigen::MatrixXd &_mat) const override {
+                 Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
 
     return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
   }
@@ -242,7 +248,29 @@ protected:
   value_on_repr(const typename DomainType::Representation &_in,
                 typename CoDomainType::Representation &_result) const = 0;
   virtual bool diff_from_repr(const typename DomainType::Representation &_in,
-                              Eigen::MatrixXd &_mat) const = 0;
+                              Eigen::Ref<Eigen::MatrixXd> &_mat) const = 0;
+};
+
+template <typename Set>
+class Identity : public MapInheritanceHelper<Identity<Set>, Map<Set, Set>> {
+public:
+  Identity() = default;
+  Identity(const Identity &_that) = default;
+  Identity(Identity &&_that) = default;
+
+private:
+  bool value_on_repr(const typename Set::Representation &_in,
+                     typename Set::Representation &_result) const override {
+
+    _result = _in;
+    return true;
+  }
+  bool diff_from_repr(const typename Set::Representation &,
+                      Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
+    _mat.noalias() = Map<Set, Set>::Differential_t::Identity(
+        Set::tangent_repr_dimension, Set::tangent_repr_dimension);
+    return true;
+  }
 };
 
 }; // namespace manifolds

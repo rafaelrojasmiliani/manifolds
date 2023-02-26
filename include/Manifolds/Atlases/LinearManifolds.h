@@ -12,53 +12,44 @@ public:
 
   using Tangent = Eigen::Matrix<double, Rows * Cols, 1>;
 
-  static void chart(const Representation &point1, const Representation &point2,
+  static void chart(const Representation &, const Representation &,
                     const Representation &element, Coordinates &result) {
     result = Eigen::Map<const Coordinates>(element.data());
   }
 
-  static void chart_diff(const Representation &point1,
-                         const Representation &point2,
-                         const Representation &element, Coordinates &result) {
+  static void chart_diff(const Representation &, const Representation &,
+                         const Representation &, Coordinates &result) {
 
     result = ChartDifferential::Identity();
   }
 
-  static void param(const Representation &point1, const Representation &point2,
+  static void param(const Representation &, const Representation &,
                     const Coordinates &coordinates, Representation &result) {
     result = Eigen::Map<const Representation>(coordinates.data());
   }
 
-  static void param_diff(const Representation &point1,
-                         const Representation &point2,
-                         const Eigen::Matrix<double, 2, 1> &coordinates,
-                         Coordinates &result) {
+  static void param_diff(const Representation &, const Representation &,
+                         const Coordinates &, ChartDifferential &result) {
     result = ChartDifferential::Identity();
   }
 
   static Representation random_projection() { return Representation::Random(); }
 
-  static void change_of_coordinates(const Representation &point1A,
-                                    const Representation &point2A,
-                                    const Representation &point1B,
-                                    const Representation &point2B,
-                                    const Coordinates &coordinates,
-                                    Coordinates &result) {
+  static void
+  change_of_coordinates(const Representation &, const Representation &,
+                        const Representation &, const Representation &,
+                        const Coordinates &coordinates, Coordinates &result) {
     result = coordinates;
   }
 
-  static void change_of_coordinates_diff(const Representation &point1A,
-                                         const Representation &point2A,
-                                         const Representation &point1B,
-                                         const Representation &point2B,
-                                         const Coordinates &coordinates,
-                                         ChangeOfCoordinatesDiff &result) {
+  static void
+  change_of_coordinates_diff(const Representation &, const Representation &,
+                             const Representation &, const Representation &,
+                             const Coordinates &, ChangeOfCoordinatesDiff &) {
     ChangeOfCoordinatesDiff::Identity();
   }
 
-  static const std::size_t dimension = Rows * Cols;
+  static constexpr std::size_t dimension = Rows * Cols;
 
-  static const std::size_t tanget_repr_dimension = Rows * Cols;
-
-private:
+  static constexpr std::size_t tangent_repr_dimension = Rows * Cols;
 };

@@ -29,7 +29,8 @@ protected:
 
 private:
   bool value_impl(const ManifoldBase *_in, ManifoldBase *_other) const override;
-  bool diff_impl(const ManifoldBase *_in, Eigen::MatrixXd &_mat) const override;
+  bool diff_impl(const ManifoldBase *_in,
+                 Eigen::Ref<Eigen::MatrixXd> &_mat) const override;
 
   std::size_t get_dom_dim() const override;
   std::size_t get_codom_dim() const override;

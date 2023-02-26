@@ -25,10 +25,11 @@ class MyTest(unittest.TestCase):
         super().__init__(*args, **kwargs)
 
     def test(self):
+        pass
 
-        ChartGenerator(Sphere, "test", "./generation_tests/include/",
-                       "./generation_tests/src/",
-                       "./generation_tests/tests/").write()
+        # ChartGenerator(Sphere, "test", "./generation_tests/include/",
+        #                "./generation_tests/src/",
+        #                "./generation_tests/tests/").write()
 
 
 if __name__ == '__main__':

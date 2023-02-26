@@ -10,23 +10,61 @@
 using namespace manifolds;
 
 TEST(Manifolds, FaithfullManifolds) {
+  // Test instantiation
   R3 a;
-  // Test that a pass as a reference to its representation
-  auto fun = [](Eigen::Vector3d &v) { v(0) = 1.5; };
-  fun(a);
-  EXPECT_NEAR(a.crepr()(0), 1.5, 1.0e-9);
-
-  // Test that a pass as a const reference to its representation
-  auto fun2 = [](const Eigen::Vector3d &v) { return v(0); };
-  EXPECT_NEAR(fun2(a), 1.5, 1.0e-9);
-
-  // Test assigment operator
+  // Test assigment with representation operator
   Eigen::Vector3d v = {1, 2, 3};
   a = v;
   EXPECT_TRUE(a.crepr().isApprox(v));
 
+  // Test assigment with manifold operator
+  R3 d;
+  d = a;
+  EXPECT_TRUE(a.crepr().isApprox(d.crepr()));
+
+  // Test copy constructor with other manifold
+  R3 b = a;
+  EXPECT_TRUE(a.crepr().isApprox(b.crepr()));
+
+  // Test copy constructor from represenation
+  R3 c = v;
+  EXPECT_TRUE(c.crepr().isApprox(v));
+
+  // Test getters
+  EXPECT_EQ(a.get_dim(), R3::dimension);
+  EXPECT_EQ(a.get_tanget_repr_dim(), R3::tangent_repr_dimension);
+
+  // Test cast to reference
+  auto fun = [](Eigen::Vector3d &v) { v(0) = 1.5; };
+  fun(a);
+  EXPECT_NEAR(a.crepr()(0), 1.5, 1.0e-9);
+
+  // Test cast to const reference
+  auto fun2 = [](const Eigen::Vector3d &v) { return v(0); };
+  EXPECT_NEAR(fun2(a), 1.5, 1.0e-9);
+
+  // Test cast to const reference again
   Eigen::Vector3d v2 = a;
   EXPECT_TRUE(v2.isApprox(a.crepr()));
+
+  // Test of ManifoldBase
+  // Test ManifoldBase constructor
+  std::unique_ptr<ManifoldBase> b_ptr = std::make_unique<R3>();
+  *static_cast<R3 *>(b_ptr.get()) = v;
+  EXPECT_TRUE(static_cast<R3 *>(b_ptr.get())->crepr().isApprox(v));
+
+  // Test ManifoldBase Copy constructor
+  std::unique_ptr<ManifoldBase> a_ptr = std::make_unique<R3>(a);
+  EXPECT_TRUE(static_cast<R3 *>(a_ptr.get())->crepr().isApprox(a.crepr()));
+
+  // Test ManifoldBase clone
+  std::unique_ptr<ManifoldBase> c_ptr = b_ptr->clone();
+  EXPECT_TRUE(static_cast<R3 *>(c_ptr.get())
+                  ->crepr()
+                  .isApprox(static_cast<R3 *>(b_ptr.get())->crepr()));
+  // Test methods
+  EXPECT_EQ(a_ptr->get_dim(), R3::dimension);
+  EXPECT_EQ(a_ptr->get_tanget_repr_dim(), R3::tangent_repr_dimension);
 }
 
 /* Test that we get the correct basis*/

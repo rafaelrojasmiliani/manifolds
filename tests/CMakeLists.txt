@@ -1,6 +1,6 @@
 include(GoogleTest)
 link_directories(${PROJECT_SOURCE_DIR}/build)
-link_libraries(gtest pthread gsplines manifolds)
+link_libraries(gtest pthread manifolds)
 include_directories(PUBLIC ${PROJECT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS})
 
 file(GLOB_RECURSE test_list ${PROJECT_SOURCE_DIR}/tests/*.cpp)
@@ -12,6 +12,7 @@ foreach(file_path ${test_list})
   get_filename_component(barename ${file_path} NAME)
   string(REPLACE ".cpp" "" new_name ${barename})
   add_executable(${new_name} ${file_path})
+  target_compile_options(${new_name} PRIVATE -Wall -Wextra -Wpedantic -Werror)
   gtest_discover_tests(${new_name})
 endforeach()
 
