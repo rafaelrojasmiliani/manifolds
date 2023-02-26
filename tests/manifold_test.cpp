@@ -10,14 +10,23 @@
 using namespace manifolds;
 
 TEST(Manifolds, FaithfullManifolds) {
-
   R3 a;
-  auto fun = [](Eigen::Vector3d &v) { v(0) = 0; };
+  // Test that a pass as a reference to its representation
+  auto fun = [](Eigen::Vector3d &v) { v(0) = 1.5; };
   fun(a);
-  Eigen::Vector3d v;
-  v = a;
+  EXPECT_NEAR(a.crepr()(0), 1.5, 1.0e-9);
+
+  // Test that a pass as a const reference to its representation
+  auto fun2 = [](const Eigen::Vector3d &v) { return v(0); };
+  EXPECT_NEAR(fun2(a), 1.5, 1.0e-9);
+
+  // Test assigment operator
+  Eigen::Vector3d v = {1, 2, 3};
   a = v;
-  v << 1, 2, 3;
+  EXPECT_TRUE(a.crepr().isApprox(v));
+
+  Eigen::Vector3d v2 = a;
+  EXPECT_TRUE(v2.isApprox(a.crepr()));
 }
 
 /* Test that we get the correct basis*/

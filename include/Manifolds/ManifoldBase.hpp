@@ -5,7 +5,7 @@ namespace manifolds {
 
 class MapBase;
 class MapBaseComposition;
-template <typename T, typename U> class Map;
+
 class ManifoldBase {
 private:
   friend class MapBase;
@@ -36,11 +36,13 @@ protected:
 
 template <typename Current, typename Base>
 class ManifoldInheritanceHelper : public Base {
+private:
+  using ThisClass = ManifoldInheritanceHelper<Current, Base>;
+
 public:
-  using type = ManifoldInheritanceHelper<Current, Base>;
   using Base::Base;
-  ManifoldInheritanceHelper(const type &_in) : Base(_in) {}
-  ManifoldInheritanceHelper(type &&_in) : Base(std::move(_in)) {}
+  ManifoldInheritanceHelper(const ThisClass &_in) : Base(_in) {}
+  ManifoldInheritanceHelper(ThisClass &&_in) : Base(std::move(_in)) {}
   virtual ~ManifoldInheritanceHelper() = default;
 
   std::unique_ptr<Current> clone() const {
