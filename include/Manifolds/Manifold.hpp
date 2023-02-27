@@ -10,6 +10,7 @@ class Manifold : public ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>,
                                                   ManifoldBase>,
                  public Atlas {
   template <typename T, typename U> friend class Map;
+  template <typename T, typename U> friend class MapComposition;
 
   using base_t =
       ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>, ManifoldBase>;
@@ -20,12 +21,13 @@ public:
 protected:
   Representation representation_;
 
+private:
 public:
   // Generic livecycle
   Manifold() : base_t(), representation_() {}
   Manifold(const Manifold &that)
       : base_t(that), representation_(that.representation_) {}
-  Manifold(const Manifold &&that)
+  Manifold(Manifold &&that)
       : base_t(std::move(that)),
         representation_(std::move(that.representation_)) {}
   virtual ~Manifold() = default;
@@ -96,8 +98,8 @@ private:
       : representation_(_in) {}
 
   template <bool F = Faithfull>
-  Manifold(const std::enable_if_t<not F, Representation> &&_in)
-      : representation_(_in) {}
+  Manifold(std::enable_if_t<not F, Representation> &&_in)
+      : representation_(std::move(_in)) {}
 
   /// override assign but private
   void assign(const std::unique_ptr<ManifoldBase> &_other) override {

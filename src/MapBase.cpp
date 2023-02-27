@@ -24,7 +24,7 @@ std::unique_ptr<MapBase> MapBase::move_clone() {
 }
 
 bool MapBase::diff(const std::unique_ptr<ManifoldBase> &_in,
-                   Eigen::Ref<Eigen::MatrixXd> &_mat) const {
+                   Eigen::Ref<Eigen::MatrixXd> _mat) const {
   return diff_impl(_in.get(), _mat);
 }
 

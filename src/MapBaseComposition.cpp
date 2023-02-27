@@ -17,14 +17,13 @@ MapBaseComposition::MapBaseComposition(MapBaseComposition &&_that) {
 }
 
 MapBaseComposition::MapBaseComposition(const MapBase &_in)
-    : MapInheritanceHelper(), maps_() {
+    : MapBase(), maps_() {
   maps_.push_back(_in.clone());
   codomain_buffers_.push_back(_in.codomain_buffer());
   matrix_buffers_.push_back(_in.linearization_buffer());
 }
 
-MapBaseComposition::MapBaseComposition(MapBase &&_in)
-    : MapInheritanceHelper(), maps_() {
+MapBaseComposition::MapBaseComposition(MapBase &&_in) : MapBase(), maps_() {
   codomain_buffers_.push_back(_in.codomain_buffer());
   matrix_buffers_.push_back(_in.linearization_buffer());
   maps_.push_back(_in.move_clone());
@@ -32,8 +31,7 @@ MapBaseComposition::MapBaseComposition(MapBase &&_in)
 
 MapBaseComposition::MapBaseComposition(
     const std::vector<std::unique_ptr<MapBase>> &_in)
-    : MapInheritanceHelper(), maps_() {
-  std::vector<MapBase> res;
+    : MapBase(), maps_() {
   for (const auto &map : _in) {
     maps_.push_back(map->clone());
     matrix_buffers_.push_back(map->linearization_buffer());
@@ -43,7 +41,7 @@ MapBaseComposition::MapBaseComposition(
 
 MapBaseComposition::MapBaseComposition(
     std::vector<std::unique_ptr<MapBase>> &&_in)
-    : MapInheritanceHelper(), maps_() {
+    : MapBase(), maps_() {
   for (auto &map : _in) {
     codomain_buffers_.push_back(map->codomain_buffer());
     matrix_buffers_.push_back(map->linearization_buffer());
@@ -51,57 +49,71 @@ MapBaseComposition::MapBaseComposition(
   }
 }
 
+MapBaseComposition::MapBaseComposition(const std::unique_ptr<MapBase> &_in)
+    : MapBase(), maps_() {
+  maps_.push_back(_in->clone());
+  matrix_buffers_.push_back(_in->linearization_buffer());
+  codomain_buffers_.push_back(_in->codomain_buffer());
+}
+
+MapBaseComposition::MapBaseComposition(std::unique_ptr<MapBase> &&_in)
+    : MapBase(), maps_() {
+  codomain_buffers_.push_back(_in->codomain_buffer());
+  matrix_buffers_.push_back(_in->linearization_buffer());
+  maps_.push_back(_in->move_clone());
+}
+
 bool MapBaseComposition::value_impl(const ManifoldBase *_in,
                                     ManifoldBase *_other) const {
 
   auto map_it = maps_.end();
   auto codomain_it = codomain_buffers_.end();
-  auto domain_it = codomain_buffers_.end();
-  std::prev(map_it, 1);
-  std::prev(codomain_it, 1);
-  std::prev(domain_it, 1);
+  map_it = std::prev(map_it, 1);
+  codomain_it = std::prev(codomain_it, 1);
   (*map_it)->value_impl(_in, codomain_it->get());
 
-  do {
+  while (map_it != maps_.begin()) {
+    auto domain_it = codomain_it;
     --map_it;
     --codomain_it;
     (*map_it)->value(*domain_it, *codomain_it);
-    --domain_it;
-  } while (map_it != maps_.begin());
+  }
 
   _other->assign(*codomain_it);
   return true;
 }
 
 void MapBaseComposition::append(const MapBase &_in) {
+  codomain_buffers_.push_back(_in.codomain_buffer());
+  matrix_buffers_.push_back(_in.linearization_buffer());
   maps_.push_back(_in.clone());
 }
 void MapBaseComposition::append(MapBase &&_in) {
+  codomain_buffers_.push_back(_in.codomain_buffer());
+  matrix_buffers_.push_back(_in.linearization_buffer());
   maps_.push_back(_in.move_clone());
 }
 
 bool MapBaseComposition::diff_impl(const ManifoldBase *_in,
-                                   Eigen::MatrixXd &_mat) const {
+                                   Eigen::Ref<Eigen::MatrixXd> _mat) const {
   auto map_it = maps_.end();
   auto codomain_it = codomain_buffers_.end();
   auto matrix_it = matrix_buffers_.end();
-  auto domain_it = codomain_buffers_.end();
-  std::prev(map_it, 1);
-  std::prev(codomain_it, 1);
-  std::prev(domain_it, 1);
-  std::prev(matrix_it, 1);
+  map_it = std::prev(map_it, 1);
+  codomain_it = std::prev(codomain_it, 1);
+  matrix_it = std::prev(matrix_it, 1);
 
   (*map_it)->value_impl(_in, codomain_it->get());
   (*map_it)->diff_impl(_in, *matrix_it);
 
-  do {
+  while (map_it != maps_.begin()) {
+    auto domain_it = codomain_it;
     --map_it;
     --codomain_it;
     --matrix_it;
     (*map_it)->value(*domain_it, *codomain_it);
     (*map_it)->diff(*domain_it, *matrix_it);
-    --domain_it;
-  } while (map_it != maps_.begin());
+  }
 
   _mat.noalias() = *matrix_it;
   return true;

@@ -11,11 +11,8 @@
 
 namespace manifolds {
 
-template <typename DomainType, typename CoDomainType> class MapComposition;
-
 template <typename DomainType, typename CoDomainType>
-class Map : public AbstractMapInheritanceHelper<Map<DomainType, CoDomainType>,
-                                                MapBase> {
+class Map : virtual public MapBase {
 public:
   using Domain_t = DomainType;
   using Codomain_t = CoDomainType;
@@ -29,6 +26,15 @@ public:
   Map(const Map &_that) = default;
   Map(Map &&_that) = default;
   virtual ~Map() = default;
+
+  // Clone
+  std::unique_ptr<Map> clone() const {
+    return std::unique_ptr<Map>(clone_impl());
+  }
+
+  std::unique_ptr<Map> move_clone() {
+    return std::unique_ptr<Map>(move_clone_impl());
+  }
 
   // Defintioon of out value(in)
   template <bool F = (not CoDomainType::is_faithfull and
@@ -195,13 +201,17 @@ public:
                                  Eigen::Ref<Eigen::MatrixXd> _out) const {
     return diff_from_repr(_in, _out);
   }
-  /*
-    template <typename OtherDomainType>
-    MapComposition<CoDomainType, OtherDomainType>
-    compose(const Map<DomainType, OtherDomainType> _in) const {
-      return MapComposition<CoDomainType, DomainType>(*this).compose(_in);
-    }
-    */
+
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(const Map<DomainType, OtherDomainType> &_in) const {
+    static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
+    static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
+
+    auto a = MapComposition<CoDomainType, DomainType>(*this);
+
+    return a.compose(_in);
+  }
 
   virtual std::size_t get_dom_dim() const override {
     // if (DomainType::dim == Eigen::Dynamic)
@@ -224,7 +234,7 @@ public:
     return CoDomainType::tangent_repr_dimension;
   }
 
-private:
+protected:
   bool value_impl(const ManifoldBase *_in,
                   ManifoldBase *_other) const override {
 
@@ -232,14 +242,14 @@ private:
                          static_cast<CoDomainType *>(_other)->repr());
   }
   bool diff_impl(const ManifoldBase *_in,
-                 Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
+                 Eigen::Ref<Eigen::MatrixXd> _mat) const override {
 
     return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
   }
-  virtual Domain_t *domain_buffer_impl() const override {
+  virtual ManifoldBase *domain_buffer_impl() const override {
     return new Domain_t();
   }
-  virtual Codomain_t *codomain_buffer_impl() const override {
+  virtual ManifoldBase *codomain_buffer_impl() const override {
     return new Codomain_t();
   }
 
@@ -258,7 +268,7 @@ public:
   Identity(const Identity &_that) = default;
   Identity(Identity &&_that) = default;
 
-private:
+protected:
   bool value_on_repr(const typename Set::Representation &_in,
                      typename Set::Representation &_result) const override {
 

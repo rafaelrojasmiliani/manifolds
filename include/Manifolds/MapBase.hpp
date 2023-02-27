@@ -15,7 +15,7 @@ private:
   virtual bool value_impl(const ManifoldBase *_in,
                           ManifoldBase *_other) const = 0;
   virtual bool diff_impl(const ManifoldBase *_in,
-                         Eigen::Ref<Eigen::MatrixXd> &_mat) const = 0;
+                         Eigen::Ref<Eigen::MatrixXd> _mat) const = 0;
 
 public:
   // Default lifecycle
@@ -37,7 +37,7 @@ public:
   std::unique_ptr<MapBase> move_clone();
 
   bool diff(const std::unique_ptr<ManifoldBase> &_in,
-            Eigen::Ref<Eigen::MatrixXd> &_mat) const;
+            Eigen::Ref<Eigen::MatrixXd> _mat) const;
 
   // return manifold buffers
   virtual std::unique_ptr<ManifoldBase> codomain_buffer() const;
@@ -72,12 +72,12 @@ public:
   }
 
 protected:
-  virtual MapBase *clone_impl() const override {
+  virtual Base *clone_impl() const override {
 
     return new Current(*static_cast<const Current *>(this));
   }
 
-  virtual MapBase *move_clone_impl() override {
+  virtual Base *move_clone_impl() override {
     return new Current(std::move(*static_cast<Current *>(this)));
   }
 };

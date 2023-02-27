@@ -1,4 +1,3 @@
-
 #include <Eigen/Core>
 #include <Manifolds/LinearManifolds.hpp>
 #include <Manifolds/Map.hpp>

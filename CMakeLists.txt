@@ -17,6 +17,7 @@ add_library(
   manifolds SHARED
   ${PROJECT_SOURCE_DIR}/src/Atlases/Sphere.cpp
   ${PROJECT_SOURCE_DIR}/src/MapBase.cpp
+  ${PROJECT_SOURCE_DIR}/src/MapBaseComposition.cpp #
   # ${PROJECT_SOURCE_DIR}/src/Sphere.cpp ${PROJECT_SOURCE_DIR}/src/MapBase.cpp
   # ${PROJECT_SOURCE_DIR}/src/MapBaseComposition.cpp #
 )

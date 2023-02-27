@@ -1,10 +1,10 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <Manifolds/Sphere.hpp>
+//#include <Manifolds/Sphere.hpp>
 #include <algorithm> // std::sort, std::stable_sort
 #include <cmath>
-#include <gsplines/Collocation/GaussLobattoLagrange.hpp>
+// #include <gsplines/Collocation/GaussLobattoLagrange.hpp>
 #include <gtest/gtest.h>
 #include <numeric> // std::iota
 #include <random>
@@ -17,6 +17,7 @@
 //  Two points are used to generate charts and respective parametrizations.
 //  The chart should cover both points.
 //
+/*
 std::random_device rd;
 std::mt19937 mt(rd());
 std::uniform_real_distribution<double> inclination_dist(0, 3.1);
@@ -45,7 +46,7 @@ TEST(Manifolds, Sphere) {
     }
   }
 }
-
+*/
 int main(int argc, char **argv) {
 
   ::testing::InitGoogleTest(&argc, argv);

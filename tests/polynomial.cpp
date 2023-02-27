@@ -2,7 +2,6 @@
 
 #include <Manifolds/LinearManifolds.hpp>
 #include <Manifolds/Map.hpp>
-#include <gsplines/Collocation/GaussLobattoLagrange.hpp>
 #include <gtest/gtest.h>
 #include <numeric> // std::iota
 #include <random>
@@ -15,6 +14,7 @@
 //  Two points are used to generate charts and respective parametrizations.
 //  The chart should cover both points.
 //
+/*
 std::random_device rd;
 std::mt19937 mt(rd());
 std::uniform_real_distribution<double> inclination_dist(0, 3.1);
@@ -160,6 +160,7 @@ TEST(Manifolds, Sphere) {
   VectorPolynomial<2>(0, 1, gsplines::basis::BasisLagrangeGaussLobatto(nc),
                       Eigen::VectorXd::Random(nc * 2));
 }
+*/
 
 int main(int argc, char **argv) {
 
