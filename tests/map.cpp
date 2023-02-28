@@ -24,6 +24,7 @@ TEST(Map, Identity) {
   R3 p1(Eigen::Vector3d::Random());
   R3 p3(Eigen::Vector3d::Random());
 
+  Identity<R3> m;
   /// Test function
   Identity<R3> id;
   R3 p2 = id(p1);

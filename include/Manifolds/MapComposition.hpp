@@ -10,6 +10,8 @@ template <typename DomainType, typename CoDomainType> class Map;
 template <typename DomainType, typename CoDomainType>
 class MapComposition : public virtual Map<DomainType, CoDomainType>,
                        public virtual MapBaseComposition {
+  static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
+  static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
   bool value_impl(const ManifoldBase *_in,
                   ManifoldBase *_other) const override {
     return MapBaseComposition::value_impl(_in, _other);
@@ -87,15 +89,16 @@ protected:
   }
   virtual bool
   value_on_repr(const typename DomainType::Representation &_in,
-                typename CoDomainType::Representation &_result) const {
+                typename CoDomainType::Representation &_result) const override {
     static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
     static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
     DomainType m1(_in);
     CoDomainType m2(_result);
     return value_impl(&m1, &m2);
   }
-  virtual bool diff_from_repr(const typename DomainType::Representation &_in,
-                              Eigen::Ref<Eigen::MatrixXd> &_mat) const {
+  virtual bool
+  diff_from_repr(const typename DomainType::Representation &_in,
+                 Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
     DomainType m1(_in);
     return diff_impl(&m1, _mat);
   }

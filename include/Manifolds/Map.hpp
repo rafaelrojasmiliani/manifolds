@@ -13,6 +13,11 @@ namespace manifolds {
 
 template <typename DomainType, typename CoDomainType>
 class Map : virtual public MapBase {
+  static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>,
+                "The codomain must inherit from ManifoldBase");
+  static_assert(std::is_base_of_v<ManifoldBase, DomainType>,
+                "The domain must intherit from ManifoldBase");
+
 public:
   using Domain_t = DomainType;
   using Codomain_t = CoDomainType;
@@ -264,6 +269,7 @@ protected:
 template <typename Set>
 class Identity : public MapInheritanceHelper<Identity<Set>, Map<Set, Set>> {
 public:
+  static_assert(std::is_base_of_v<ManifoldBase, Set>);
   Identity() = default;
   Identity(const Identity &_that) = default;
   Identity(Identity &&_that) = default;
