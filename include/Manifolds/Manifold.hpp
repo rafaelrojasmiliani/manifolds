@@ -42,7 +42,11 @@ public:
   Manifold(Manifold &&that)
       : base_t(std::move(that)),
         representation_(new Representation(std::move(*that.representation_))),
-        const_representation_(representation_), onwing_(true) {}
+        const_representation_(representation_), onwing_(true) {
+    that.representation_ = nullptr;
+    that.const_representation_ = nullptr;
+    that.onwing_ = false;
+  }
 
   virtual ~Manifold() {
     if (onwing_)
@@ -63,6 +67,9 @@ public:
     if (not representation_)
       throw std::logic_error("Trying to assign to a constnat manifold element");
     *representation_ = std::move(*_other.representation_);
+    _other.representation_ = nullptr;
+    _other.const_representation_ = nullptr;
+    _other.onwing_ = false;
     return *this;
   }
 

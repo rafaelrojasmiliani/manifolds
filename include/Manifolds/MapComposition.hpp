@@ -92,8 +92,8 @@ protected:
                 typename CoDomainType::Representation &_result) const override {
     static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
     static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
-    DomainType m1(_in);
-    CoDomainType m2(_result);
+    auto m1 = DomainType::Ref(_in);
+    auto m2 = CoDomainType::Ref(_result);
     return value_impl(&m1, &m2);
   }
   virtual bool
