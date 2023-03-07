@@ -1,4 +1,4 @@
-#include <Manifolds/LinearManifolds.hpp>
+#include <Manifolds/LinearManifolds/LinearManifolds.hpp>
 
 #include <gtest/gtest.h>
 

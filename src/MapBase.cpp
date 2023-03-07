@@ -1,4 +1,4 @@
-#include <Manifolds/MapBase.hpp>
+#include <Manifolds/Maps/MapBase.hpp>
 namespace manifolds {
 
 std::unique_ptr<ManifoldBase>

@@ -7,6 +7,9 @@ namespace manifolds {
 template <long Rows, long Cols>
 using MatrixManifold = Manifold<LinearManifoldAtlas<Rows, Cols>, true>;
 
+template <long Rows>
+using LinearManifold = Manifold<LinearManifoldAtlas<Rows, 1>, true>;
+
 using R2 = MatrixManifold<2, 1>;
 using R3 = MatrixManifold<3, 1>;
 using R4 = MatrixManifold<4, 1>;

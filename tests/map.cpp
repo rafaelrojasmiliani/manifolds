@@ -1,6 +1,6 @@
 #include <Eigen/Core>
-#include <Manifolds/LinearManifolds.hpp>
-#include <Manifolds/Map.hpp>
+#include <Manifolds/LinearManifolds/LinearManifolds.hpp>
+#include <Manifolds/Maps/Map.hpp>
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <memory>

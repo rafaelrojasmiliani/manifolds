@@ -1,21 +1,21 @@
 #include <Eigen/Core>
 #pragma once
-template <long Rows, long Cols> class LinearManifoldAtlas {
+
+class RealsAtlas {
 public:
-  using Representation = Eigen::Matrix<double, Rows, Cols>;
-  using Coordinates = Eigen::Matrix<double, Rows * Cols, 1>;
+  using Representation = double;
+  using Coordinates = double;
+  using ChartDifferential = Eigen::Matrix<double, 1, 1>;
 
-  using ChartDifferential = Eigen::Matrix<double, Rows * Cols, Rows * Cols>;
-  using ChangeOfCoordinatesDiff =
-      Eigen::Matrix<double, Rows * Cols, Rows * Cols>;
-  using ParametrizationDifferential =
-      Eigen::Matrix<double, Rows * Cols, Rows * Cols>;
+  using ChangeOfCoordinatesDiff = Eigen::Matrix<double, 1, 1>;
 
-  using Tangent = Eigen::Matrix<double, Rows * Cols, 1>;
+  using ParametrizationDifferential = Eigen::Matrix<double, 1, 1>;
+
+  using Tangent = Eigen::Matrix<double, 1, 1>;
 
   static void chart(const Representation &, const Representation &,
                     const Representation &element, Coordinates &result) {
-    result = Eigen::Map<const Coordinates>(element.data());
+    result = element;
   }
 
   static void chart_diff(const Representation &, const Representation &,
@@ -27,7 +27,7 @@ public:
 
   static void param(const Representation &, const Representation &,
                     const Coordinates &coordinates, Representation &result) {
-    result = Eigen::Map<const Representation>(coordinates.data());
+    result = coordinates;
   }
 
   static void param_diff(const Representation &, const Representation &,
@@ -36,7 +36,9 @@ public:
     result = ChartDifferential::Identity();
   }
 
-  static Representation random_projection() { return Representation::Random(); }
+  static Representation random_projection() {
+    return ChartDifferential::Random()(0, 0);
+  }
 
   static void
   change_of_coordinates(const Representation &, const Representation &,
@@ -53,7 +55,7 @@ public:
     result = ChangeOfCoordinatesDiff::Identity();
   }
 
-  static constexpr std::size_t dimension = Rows * Cols;
+  static constexpr std::size_t dimension = 1;
 
-  static constexpr std::size_t tangent_repr_dimension = Rows * Cols;
+  static constexpr std::size_t tangent_repr_dimension = 1;
 };

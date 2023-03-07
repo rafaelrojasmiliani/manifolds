@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Manifolds/Manifold.hpp>
-#include <Manifolds/MapBase.hpp>
-#include <Manifolds/MapComposition.hpp>
+#include <Manifolds/Maps/MapBase.hpp>
+#include <Manifolds/Maps/MapComposition.hpp>
 
 #include <Eigen/Core>
 #include <algorithm>

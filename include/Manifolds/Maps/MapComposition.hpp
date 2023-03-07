@@ -1,26 +1,19 @@
 #pragma once
-////#include <Manifolds/Map.hpp>
 #include <Manifolds/Manifold.hpp>
-#include <Manifolds/MapBaseComposition.hpp>
+#include <Manifolds/Maps/MapBaseComposition.hpp>
 
 namespace manifolds {
 
 template <typename DomainType, typename CoDomainType> class Map;
 
+/// Typed composition of maps.
 template <typename DomainType, typename CoDomainType>
 class MapComposition : public virtual Map<DomainType, CoDomainType>,
                        public virtual MapBaseComposition {
   static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
   static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
-  bool value_impl(const ManifoldBase *_in,
-                  ManifoldBase *_other) const override {
-    return MapBaseComposition::value_impl(_in, _other);
-  }
-  bool diff_impl(const ManifoldBase *_in,
-                 Eigen::Ref<Eigen::MatrixXd> _mat) const override {
-    return MapBaseComposition::diff_impl(_in, _mat);
-  }
 
+protected:
 public:
   std::size_t get_dom_dim() const override {
     return MapBaseComposition::get_dom_dim();
@@ -43,10 +36,40 @@ public:
     return Map<DomainType, CoDomainType>::codomain_buffer_impl();
   }
 
+  // -------------------------------------------
+  // -------- Live cycle -----------------------
+  // -------------------------------------------
+
+  /// Constructor from a typed map
   MapComposition(const Map<DomainType, CoDomainType> &m)
       : MapBaseComposition(m) {}
+  /// Move-Constructor from a typed map
+  MapComposition(Map<DomainType, CoDomainType> &&m)
+      : MapBaseComposition(std::move(m)) {}
+
+  /// Copy constructor from a typed map
+  MapComposition(const MapComposition<DomainType, CoDomainType> &m)
+      : MapBaseComposition(m) {}
+
+  /// Move constructor from a typed map
+  MapComposition(MapComposition<DomainType, CoDomainType> &&m)
+      : MapBaseComposition(std::move(m)) {}
+
+  /// Default destructor.
   virtual ~MapComposition() = default;
 
+  MapComposition operator=(const MapComposition &that) {
+    MapBaseComposition::operator=(that);
+    return *this;
+  }
+
+  MapComposition operator=(MapComposition &&that) {
+    MapBaseComposition::operator=(std::move(that));
+    return *this;
+  }
+  // -------------------------------------------
+  // -------- Modifiers ------------------------
+  // -------------------------------------------
   template <typename OtherDomainType>
   MapComposition<CoDomainType, OtherDomainType>
   compose(const Map<DomainType, OtherDomainType> &_in) const & {
@@ -80,6 +103,17 @@ public:
   }
 
 protected:
+  // -------------------------------------------
+  // -------- Interface -----------------------
+  // -------------------------------------------
+  bool value_impl(const ManifoldBase *_in,
+                  ManifoldBase *_other) const override {
+    return MapBaseComposition::value_impl(_in, _other);
+  }
+  bool diff_impl(const ManifoldBase *_in,
+                 Eigen::Ref<Eigen::MatrixXd> _mat) const override {
+    return MapBaseComposition::diff_impl(_in, _mat);
+  }
   virtual MapComposition *clone_impl() const override {
     return new MapComposition(*this);
   }

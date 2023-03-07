@@ -153,7 +153,17 @@ public:
     return Atlas::tangent_repr_dimension;
   }
   /// Get const referece to the representtion
-  const Representation &crepr() const { return *const_representation_; };
+  constexpr const Representation &crepr() const {
+    return *const_representation_;
+  };
+
+  // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  // ++++++++++++++++++ Charts, Params and change of coordinates ++++++++++++++
+  // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  class Chart;
+  class Parametrization;
+  class ChangeOfCoordinates;
 
 private:
   /// SNIFAE of constructors: Make non faithfull private
@@ -183,7 +193,9 @@ private:
     *representation_ =
         static_cast<Manifold<Atlas, Faithfull> *>(_other.get())->crepr();
   }
-  Representation &repr() {
+
+protected:
+  constexpr Representation &repr() {
     if (not representation_)
       throw std::logic_error("Trying to assign to a constnat manifold element");
     return *representation_;
