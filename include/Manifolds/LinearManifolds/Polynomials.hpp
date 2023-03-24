@@ -21,6 +21,7 @@ public:
   using base_t::base_t;
   bool value_on_repr(const double &_in, double &_result) const override {
     int j;
+
     const auto &c = this->crepr();
     double p = c[j = this->crepr().size() - 1];
     while (j > 0)
@@ -31,7 +32,16 @@ public:
   virtual bool
   diff_from_repr(const double &_in,
                  Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
-    _mat(0, 0) = _in;
+
+    int j = this->crepr().size() - 1;
+    const auto &c = this->crepr();
+    double p = j * c[j];
+    j--;
+    while (j > 1) {
+      p = p * _in + j * c[j];
+      j--;
+    }
+    _mat(0, 0) = p;
     return true;
   }
 };

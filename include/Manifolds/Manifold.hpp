@@ -200,6 +200,11 @@ protected:
       throw std::logic_error("Trying to assign to a constnat manifold element");
     return *representation_;
   };
+  constexpr Representation &&mrepr() {
+    if (not representation_)
+      throw std::logic_error("Trying to assign to a constnat manifold element");
+    return std::move(*representation_);
+  };
 };
 
 template <typename M> static constexpr bool manifold_sanity_check() {

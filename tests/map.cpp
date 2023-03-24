@@ -101,6 +101,57 @@ TEST(Map, Identity) {
   EXPECT_EQ(mb->get_dom_dim(), R3::dimension);
 }
 
+TEST(Map, Operations) {
+
+  R3 p1(Eigen::Vector3d::Random());
+
+  Eigen::Vector3d p2(Eigen::Vector3d::Random());
+
+  // Test   inline auto operator+(const Representation &that) const &
+  R3 p3(p1 + p2);
+  EXPECT_TRUE(p3.crepr().isApprox(p1.crepr() + p2));
+
+  // Test   inline auto operator+(const Representation &that) &
+  R3 p4(R3(p1 + p2) + p2);
+  EXPECT_TRUE(p4.crepr().isApprox(p1.crepr() + 2 * p2));
+
+  // TODO why this does not work???
+  // R3 p5 = R3(p1 + p2) + p2;
+
+  // Test auto operator+(Representation &&that) const &
+  Eigen::Vector3d p5(Eigen::Vector3d::Random());
+  p4 = p1 + Eigen::Vector3d(p5 + p2);
+  EXPECT_TRUE(p4.crepr().isApprox(p1.crepr() + p5 + p2));
+
+  // Test inline auto operator+=(const Representation &that)
+
+  p3 = p1;
+  p3 += p2;
+  EXPECT_TRUE(p3.crepr().isApprox(p1.crepr() + p2));
+
+  // Test inline auto operator+=(Representation &&that)
+  p3 = p1;
+  p3 += Eigen::Vector3d(p2);
+  EXPECT_TRUE(p3.crepr().isApprox(p1.crepr() + p2));
+
+  // TEst inline auto operator*(double that) const & {
+  p4 = p1 * 3.0;
+  EXPECT_TRUE(p4.crepr().isApprox(p1.crepr() * 3.0));
+
+  p4 = 3.0 * p1;
+  EXPECT_TRUE(p4.crepr().isApprox(p1.crepr() * 3.0));
+  // TEst inline auto operator*(double that) const & {
+
+  // Test inline auto operator*(double that) &&
+  p4 = R3(p1) * 3.0;
+  EXPECT_TRUE(p4.crepr().isApprox(p1.crepr() * 3.0));
+
+  // Test inline auto operator*=(double that)
+  p3 = p1;
+  p3 *= 4;
+  EXPECT_TRUE(p3.crepr().isApprox(p1.crepr() * 4.0));
+}
+
 int main(int argc, char **argv) {
 
   ::testing::InitGoogleTest(&argc, argv);

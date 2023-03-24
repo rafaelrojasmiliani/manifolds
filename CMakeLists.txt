@@ -27,7 +27,7 @@ target_include_directories(
   manifolds
   PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
          $<INSTALL_INTERFACE:include> ${Eigen3_INCLUDE_DIRS}
-         /usr/include/eigen3)
+         /usr/include/eigen3 ${PROJECT_SOURCE_DIR}/submodules/gcem/include/)
 target_compile_options(manifolds PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
