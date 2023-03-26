@@ -261,4 +261,100 @@ template <> constexpr std::array<double, 2> compute_glp() {
   return {-1.0, 1.0};
 }
 template <> constexpr std::array<double, 2> compute_glw() { return {1.0, 1.0}; }
+
+namespace detail {
+template <typename T, std::size_t... Is>
+constexpr std::array<T, sizeof...(Is)>
+create_array(T value, std::index_sequence<Is...>) {
+  // cast Is to void to remove the warning: unused value
+  return {{(static_cast<void>(Is), value)...}};
+}
+} // namespace detail
+
+template <std::size_t N, typename T>
+constexpr std::array<T, N> create_array(const T &value) {
+  return detail::create_array(value, std::make_index_sequence<N>());
+}
+template <std::size_t N>
+constexpr std::array<double, N>
+barycentric_weights(std::array<double, N> _points) {
+  /*  David A. Kopriva
+   *  Implementing Spectral
+   *  Methods for Partial
+   *  Differential Equations
+   *  Algorithm 30: BarycentricWeights: Weights for Lagrange Interpolation*/
+  std::array<double, N> result(create_array<N, double>(1.0));
+
+  for (std::size_t uicj = 1; uicj < _points.size(); uicj++) {
+    for (std::size_t uick = 0; uick < uicj; uick++) {
+      result[uick] = result[uick] * (_points[uick] - _points[uicj]);
+      result[uicj] = result[uicj] * (_points[uicj] - _points[uick]);
+    }
+  }
+
+  for (std::size_t uicj = 1; uicj < _points.size(); uicj++) {
+    result[uicj] = 1.0 / result[uicj];
+  }
+
+  return result;
+}
+
+template <std::size_t N>
+constexpr std::array<double, N * N>
+derivative_matrix(std::array<double, N> _points) {
+  /*  David A. Kopriva
+   *  Implementing Spectral
+   *  Methods for Partial
+   *  Differential Equations
+   *  Algorithm 37: PolynomialDerivativeMatrix: First Derivative Approximation*/
+
+  std::array<double, N * N> result(create_array<N * N, double>(0.0));
+
+  std::array<double, N> bw = barycentric_weights(_points);
+
+  for (std::size_t uici = 0; uici < N; uici++) {
+    result[uici + N * uici] = 0;
+    for (std::size_t uicj = 0; uicj < N; uicj++)
+      if (uici != uicj) {
+        result[uici + N * uicj] =
+            bw[uicj] / bw[uici] * 1.0 / (_points[uici] - _points[uicj]);
+        result[uici + N * uici] += -result[uici + N * uicj];
+      }
+  }
+
+  return result;
+}
+
+template <std::size_t N, std::size_t Deg>
+constexpr std::array<double, N * N>
+derivative_matrix_m(std::array<double, N> _points) {
+  /*  David A. Kopriva
+   *  Implementing Spectral
+   *  Methods for Partial
+   *  Differential Equations
+   *  Algorithm 38: mthOrderPolynomialDerivativeMatrix*/
+
+  std::array<double, N * N> result(derivative_matrix<N>(_points));
+  std::array<double, N * N> buff(derivative_matrix<N>(_points));
+
+  std::array<double, N> bw = barycentric_weights(_points);
+
+  for (std::size_t uick = 2; uick <= Deg; uick++) {
+    for (std::size_t uici = 0; uici < _points.size(); uici++) {
+      result[uici + N * uici] = 0;
+      for (std::size_t uicj = 0; uicj < _points.size(); uicj++) {
+        if (uici != uicj) {
+          result[uici + N * uicj] =
+              static_cast<double>(uick) / (_points[uici] - _points[uicj]) *
+              (bw[uicj] / bw[uici] * buff[uici + N * uici] -
+               buff[uici + N * uicj]);
+          result[uici + N * uici] += -result[uici + N * uicj];
+        }
+      }
+    }
+    buff = result;
+  }
+
+  return result;
+}
 } // namespace manifolds::collocation::detail

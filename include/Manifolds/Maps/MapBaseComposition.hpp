@@ -75,9 +75,12 @@ public:
 protected:
   std::vector<std::unique_ptr<MapBase>> maps_;
   mutable std::vector<std::unique_ptr<ManifoldBase>> codomain_buffers_;
+  // Here, change to Variant of dense and sparse matrix
   mutable std::vector<Eigen::MatrixXd> matrix_buffers_;
 
   bool value_impl(const ManifoldBase *_in, ManifoldBase *_other) const override;
+
+  // Here, change to Variant of dense and sparse matrix
   bool diff_impl(const ManifoldBase *_in,
                  Eigen::Ref<Eigen::MatrixXd> _mat) const override;
 

@@ -74,7 +74,7 @@ TEST(LinearMaps, Composition) {
   End3 M1(m1);
   MapComposition mymap(M1);
   End3 mymap_lin(M1);
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < 200; i++) {
 
     Eigen::Vector3d v1 = Eigen::Vector3d::Random();
     Eigen::Matrix3d m2 = Eigen::Matrix3d::Random();

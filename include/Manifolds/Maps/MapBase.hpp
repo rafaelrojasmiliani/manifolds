@@ -1,9 +1,17 @@
 #pragma once
 #include <Manifolds/ManifoldBase.hpp>
+#include <functional>
 #include <memory>
 #include <variant>
 
 namespace manifolds {
+
+using DifferentialReprRefType =
+    std::variant<Eigen::Ref<Eigen::MatrixXd>,
+                 std::reference_wrapper<Eigen::SparseMatrixBase<double>>>;
+
+using DifferentialReprType =
+    std::variant<Eigen::MatrixXd, Eigen::SparseMatrixBase<double>>;
 
 class MapBaseComposition;
 /** Dynamic and type-agnostic function representation
@@ -14,6 +22,7 @@ class MapBase {
 private:
   virtual bool value_impl(const ManifoldBase *_in,
                           ManifoldBase *_other) const = 0;
+  // Here, change to Variant of dense and sparse matrix
   virtual bool diff_impl(const ManifoldBase *_in,
                          Eigen::Ref<Eigen::MatrixXd> _mat) const = 0;
 
@@ -36,6 +45,7 @@ public:
 
   std::unique_ptr<MapBase> move_clone();
 
+  // Here, change to Variant of dense and sparse matrix
   bool diff(const std::unique_ptr<ManifoldBase> &_in,
             Eigen::Ref<Eigen::MatrixXd> _mat) const;
 
@@ -48,6 +58,7 @@ public:
   virtual std::size_t get_codom_dim() const = 0;
   virtual std::size_t get_codom_tangent_repr_dim() const = 0;
 
+  // Here, change to Variant of dense and sparse matrix
   virtual Eigen::MatrixXd linearization_buffer() const;
 
 protected:

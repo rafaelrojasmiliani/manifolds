@@ -18,6 +18,10 @@ public:
                                       MatrixManifold<CodomainDim, DomainDim>>;
 
   using Representation = typename base_t::Representation;
+  using DomainRepresentation =
+      typename LinearManifold<DomainDim>::Representation;
+  using CodomainRepresentation =
+      typename LinearManifold<CodomainDim>::Representation;
 
   using base_t::base_t;
   using base_t::operator=;
@@ -29,7 +33,9 @@ public:
     base_t::operator=(std::move(that));
     return *this;
   }
+
   LinearMap(const LinearMap &_in) : base_t(_in) {}
+
   LinearMap(LinearMap &&_in) : base_t(std::move(_in)) {}
 
   virtual bool
@@ -49,9 +55,14 @@ public:
   }
   virtual ~LinearMap() = default;
 
+  // ----------------------------------------------------
+  // -------------------  operators  --------------------
+  // ----------------------------------------------------
+
   inline auto operator*(const Representation &that) const & {
     return base_t::crepr() * that;
   }
+
   inline auto operator*(const Representation &that) && {
     return std::move(base_t::mrepr()) * that;
   }
@@ -66,6 +77,13 @@ public:
   inline void operator*=(const Representation &that) { base_t::repr() *= that; }
 
   inline void operator*=(Representation &&that) { base_t::repr() *= that; }
+
+  inline auto operator*(const DomainRepresentation &that) {
+    return base_t::crepr() * that;
+  }
+  inline auto operator*(DomainRepresentation &&that) {
+    return base_t::crepr() * std::move(that);
+  }
 
   template <std::size_t OtherDomainDim>
   LinearMap<DomainDim, OtherDomainDim>

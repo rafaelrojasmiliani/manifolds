@@ -8,12 +8,14 @@ MapBaseComposition::MapBaseComposition(const MapBaseComposition &_that) {
   for (const auto &map : _that.maps_) {
     maps_.push_back(map->clone());
     codomain_buffers_.push_back(map->codomain_buffer());
+    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.push_back(map->linearization_buffer());
   }
 }
 MapBaseComposition::MapBaseComposition(MapBaseComposition &&_that) {
   for (const auto &map : _that.maps_) {
     codomain_buffers_.push_back(map->codomain_buffer());
+    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.push_back(map->linearization_buffer());
     maps_.push_back(map->move_clone());
   }
@@ -23,11 +25,13 @@ MapBaseComposition::MapBaseComposition(const MapBase &_in)
     : MapBase(), maps_() {
   maps_.push_back(_in.clone());
   codomain_buffers_.push_back(_in.codomain_buffer());
+  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.push_back(_in.linearization_buffer());
 }
 
 MapBaseComposition::MapBaseComposition(MapBase &&_in) : MapBase(), maps_() {
   codomain_buffers_.push_back(_in.codomain_buffer());
+  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.push_back(_in.linearization_buffer());
   maps_.push_back(_in.move_clone());
 }
@@ -37,6 +41,7 @@ MapBaseComposition::MapBaseComposition(
     : MapBase(), maps_() {
   for (const auto &map : _in) {
     maps_.push_back(map->clone());
+    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.push_back(map->linearization_buffer());
     codomain_buffers_.push_back(map->codomain_buffer());
   }
@@ -47,6 +52,7 @@ MapBaseComposition::MapBaseComposition(
     : MapBase(), maps_() {
   for (auto &map : _in) {
     codomain_buffers_.push_back(map->codomain_buffer());
+    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.push_back(map->linearization_buffer());
     maps_.push_back(map->move_clone());
   }
@@ -55,6 +61,7 @@ MapBaseComposition::MapBaseComposition(
 MapBaseComposition::MapBaseComposition(const std::unique_ptr<MapBase> &_in)
     : MapBase(), maps_() {
   maps_.push_back(_in->clone());
+  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.push_back(_in->linearization_buffer());
   codomain_buffers_.push_back(_in->codomain_buffer());
 }
@@ -62,6 +69,7 @@ MapBaseComposition::MapBaseComposition(const std::unique_ptr<MapBase> &_in)
 MapBaseComposition::MapBaseComposition(std::unique_ptr<MapBase> &&_in)
     : MapBase(), maps_() {
   codomain_buffers_.push_back(_in->codomain_buffer());
+  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.push_back(_in->linearization_buffer());
   maps_.push_back(_in->move_clone());
 }
@@ -80,6 +88,7 @@ MapBaseComposition::operator=(const MapBaseComposition &that) {
                  std::back_inserter(codomain_buffers_),
                  [](const auto &in) { return in->clone(); });
 
+  // Here, change to Variant of dense and sparse matrix
   std::transform(that.matrix_buffers_.begin(), that.matrix_buffers_.end(),
                  std::back_inserter(matrix_buffers_),
                  [](const auto &in) { return in; });
@@ -95,6 +104,7 @@ MapBaseComposition &MapBaseComposition::operator=(MapBaseComposition &&that) {
 
   maps_ = std::move(that.maps_);
   codomain_buffers_ = std::move(that.codomain_buffers_);
+  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_ = std::move(that.matrix_buffers_);
 
   return *this;
@@ -104,12 +114,14 @@ MapBaseComposition &MapBaseComposition::operator=(MapBaseComposition &&that) {
 // -------------------------------------------
 void MapBaseComposition::append(const MapBase &_in) {
   codomain_buffers_.push_back(_in.codomain_buffer());
+  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.push_back(_in.linearization_buffer());
   maps_.push_back(_in.clone());
 }
 
 void MapBaseComposition::append(MapBase &&_in) {
   codomain_buffers_.push_back(_in.codomain_buffer());
+  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.push_back(_in.linearization_buffer());
   maps_.push_back(_in.move_clone());
 }
@@ -154,6 +166,7 @@ bool MapBaseComposition::diff_impl(const ManifoldBase *_in,
     --codomain_it;
     --matrix_it;
     (*map_it)->value(*domain_it, *codomain_it);
+    // Here, change to Variant of dense and sparse matrix
     (*map_it)->diff(*domain_it, *matrix_it);
   }
 
