@@ -62,6 +62,7 @@ TEST(MapComposition, Base) {
 
   // p2 = mc(p1);
 }
+
 TEST(MapComposition, Composition) {
 
   R3 p1(Eigen::Vector3d::Random());

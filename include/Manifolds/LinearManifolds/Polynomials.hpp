@@ -29,9 +29,8 @@ public:
     _result = p;
     return true;
   }
-  virtual bool
-  diff_from_repr(const double &_in,
-                 Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
+  virtual bool diff_from_repr(const double &_in,
+                              DifferentialReprRefType _mat) const override {
 
     int j = this->crepr().size() - 1;
     const auto &c = this->crepr();
@@ -41,7 +40,7 @@ public:
       p = p * _in + j * c[j];
       j--;
     }
-    _mat(0, 0) = p;
+    std::get<0>(_mat)(0, 0) = p;
     return true;
   }
 };

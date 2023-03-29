@@ -198,12 +198,12 @@ public:
   // ---------------------------------
   template <bool F = (not DomainType::is_faithfull)>
   std::enable_if_t<F, bool> diff(const DomainType &_in,
-                                 Eigen::Ref<Eigen::MatrixXd> _out) const {
+                                 DifferentialReprRefType _out) const {
     return diff_from_repr(_in.crepr(), _out);
   }
   template <bool F = DomainType::is_faithfull>
   std::enable_if_t<F, bool> diff(const typename DomainType::Representation &_in,
-                                 Eigen::Ref<Eigen::MatrixXd> _out) const {
+                                 DifferentialReprRefType _out) const {
     return diff_from_repr(_in, _out);
   }
 
@@ -247,7 +247,7 @@ protected:
                          static_cast<CoDomainType *>(_other)->repr());
   }
   bool diff_impl(const ManifoldBase *_in,
-                 Eigen::Ref<Eigen::MatrixXd> _mat) const override {
+                 DifferentialReprRefType _mat) const override {
 
     return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
   }
@@ -263,7 +263,7 @@ protected:
   value_on_repr(const typename DomainType::Representation &_in,
                 typename CoDomainType::Representation &_result) const = 0;
   virtual bool diff_from_repr(const typename DomainType::Representation &_in,
-                              Eigen::Ref<Eigen::MatrixXd> &_mat) const = 0;
+                              DifferentialReprRefType _mat) const = 0;
 };
 
 template <typename Set>
@@ -282,8 +282,8 @@ protected:
     return true;
   }
   bool diff_from_repr(const typename Set::Representation &,
-                      Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
-    _mat.noalias() = Map<Set, Set>::Differential_t::Identity(
+                      DifferentialReprRefType _mat) const override {
+    std::get<0>(_mat).noalias() = Map<Set, Set>::Differential_t::Identity(
         Set::tangent_repr_dimension, Set::tangent_repr_dimension);
     return true;
   }

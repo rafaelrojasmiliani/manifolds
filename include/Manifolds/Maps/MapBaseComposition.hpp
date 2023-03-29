@@ -75,14 +75,24 @@ public:
 protected:
   std::vector<std::unique_ptr<MapBase>> maps_;
   mutable std::vector<std::unique_ptr<ManifoldBase>> codomain_buffers_;
-  // Here, change to Variant of dense and sparse matrix
-  mutable std::vector<Eigen::MatrixXd> matrix_buffers_;
+
+  /// Stores the matrices result from the different maps in the composition
+  /// diff_0 diff_1 ... diff_{n-1}
+  mutable std::vector<DifferentialReprType> matrix_buffers_;
+
+  /// Stores the result of the multiplication sequcen of matrices
+  /// diff_0 diff_1 diff_2 ... diff_{n-3} diff_{n-2} diff_{n-1}
+  //                                      \----------v-------/
+  //                                        matrix_result_buffers_[n-2]
+  //                           \----------v----------/
+  //                            matrix_result_buffers_[n-3]
+  mutable std::vector<DifferentialReprType> matrix_result_buffers_;
 
   bool value_impl(const ManifoldBase *_in, ManifoldBase *_other) const override;
 
   // Here, change to Variant of dense and sparse matrix
   bool diff_impl(const ManifoldBase *_in,
-                 Eigen::Ref<Eigen::MatrixXd> _mat) const override;
+                 DifferentialReprRefType _mat) const override;
 
   ManifoldBase *domain_buffer_impl() const override;
   ManifoldBase *codomain_buffer_impl() const override;
@@ -94,6 +104,9 @@ protected:
   virtual MapBaseComposition *move_clone_impl() override {
     return new MapBaseComposition(std::move(*(this)));
   }
+
+  void fill_matrix_result_buffers();
+  void add_matrix_to_result_buffers();
 };
 
 } // namespace manifolds

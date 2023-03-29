@@ -8,8 +8,8 @@ template <typename DomainType, typename CoDomainType> class Map;
 
 /// Typed composition of maps.
 template <typename DomainType, typename CoDomainType>
-class MapComposition : public virtual Map<DomainType, CoDomainType>,
-                       public virtual MapBaseComposition {
+class MapComposition : public Map<DomainType, CoDomainType>,
+                       public MapBaseComposition {
   static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
   static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
 
@@ -111,7 +111,7 @@ protected:
     return MapBaseComposition::value_impl(_in, _other);
   }
   bool diff_impl(const ManifoldBase *_in,
-                 Eigen::Ref<Eigen::MatrixXd> _mat) const override {
+                 DifferentialReprRefType _mat) const override {
     return MapBaseComposition::diff_impl(_in, _mat);
   }
   virtual MapComposition *clone_impl() const override {
@@ -130,9 +130,8 @@ protected:
     auto m2 = CoDomainType::Ref(_result);
     return value_impl(&m1, &m2);
   }
-  virtual bool
-  diff_from_repr(const typename DomainType::Representation &_in,
-                 Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
+  virtual bool diff_from_repr(const typename DomainType::Representation &_in,
+                              DifferentialReprRefType _mat) const override {
     DomainType m1(_in);
     return diff_impl(&m1, _mat);
   }

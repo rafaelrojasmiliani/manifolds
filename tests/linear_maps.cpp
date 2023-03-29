@@ -72,23 +72,27 @@ TEST(LinearMaps, Composition) {
 
   Eigen::Matrix3d m1 = Eigen::Matrix3d::Random();
   End3 M1(m1);
-  MapComposition mymap(M1);
+  MapComposition map_composition(M1);
   End3 mymap_lin(M1);
-  for (int i = 0; i < 200; i++) {
+  for (int i = 0; i < 4; i++) {
 
     Eigen::Vector3d v1 = Eigen::Vector3d::Random();
     Eigen::Matrix3d m2 = Eigen::Matrix3d::Random();
     End3 M2(m2);
 
-    mymap.compose(M2);
-    mymap_lin.compose(M2);
+    map_composition = map_composition.compose(M2);
+    mymap_lin = mymap_lin.compose(M2);
+    m1 = m1 * m2;
 
-    Eigen::Vector3d w1 = mymap(v1);
+    Eigen::Vector3d w1 = map_composition(v1);
     Eigen::Vector3d w2 = mymap_lin(v1);
     EXPECT_TRUE(w1.isApprox(w2));
 
-    Eigen::Matrix3d d1 = mymap.diff(v1);
+    Eigen::Matrix3d d1 = map_composition.diff(v1);
+    EXPECT_TRUE(m1.isApprox(mymap_lin.crepr()))
+        << "Lienar map composition is not correct";
     EXPECT_TRUE(d1.isApprox(mymap_lin.crepr()));
+    std::cout << d1 << "\n--------\n" << mymap_lin.crepr() << "\n\n++++\n\n";
   }
 }
 

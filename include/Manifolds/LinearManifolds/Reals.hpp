@@ -30,10 +30,9 @@ private:
     _result = value_(_in);
     return true;
   }
-  virtual bool
-  diff_from_repr(const double &_in,
-                 Eigen::Ref<Eigen::MatrixXd> &_mat) const override {
-    _mat(0, 0) = derivative_(_in);
+  virtual bool diff_from_repr(const double &_in,
+                              DifferentialReprRefType _mat) const override {
+    std::get<0>(_mat)(0, 0) = derivative_(_in);
     return true;
   }
 };

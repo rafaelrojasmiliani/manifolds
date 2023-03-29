@@ -1,4 +1,5 @@
 #pragma once
+#include <Eigen/Sparse>
 #include <Manifolds/ManifoldBase.hpp>
 #include <functional>
 #include <memory>
@@ -8,10 +9,10 @@ namespace manifolds {
 
 using DifferentialReprRefType =
     std::variant<Eigen::Ref<Eigen::MatrixXd>,
-                 std::reference_wrapper<Eigen::SparseMatrixBase<double>>>;
+                 std::reference_wrapper<Eigen::SparseMatrix<double>>>;
 
 using DifferentialReprType =
-    std::variant<Eigen::MatrixXd, Eigen::SparseMatrixBase<double>>;
+    std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double>>;
 
 class MapBaseComposition;
 /** Dynamic and type-agnostic function representation
@@ -24,7 +25,7 @@ private:
                           ManifoldBase *_other) const = 0;
   // Here, change to Variant of dense and sparse matrix
   virtual bool diff_impl(const ManifoldBase *_in,
-                         Eigen::Ref<Eigen::MatrixXd> _mat) const = 0;
+                         DifferentialReprRefType _mat) const = 0;
 
 public:
   // Default lifecycle
@@ -47,7 +48,7 @@ public:
 
   // Here, change to Variant of dense and sparse matrix
   bool diff(const std::unique_ptr<ManifoldBase> &_in,
-            Eigen::Ref<Eigen::MatrixXd> _mat) const;
+            DifferentialReprRefType _mat) const;
 
   // return manifold buffers
   virtual std::unique_ptr<ManifoldBase> codomain_buffer() const;
@@ -59,7 +60,7 @@ public:
   virtual std::size_t get_codom_tangent_repr_dim() const = 0;
 
   // Here, change to Variant of dense and sparse matrix
-  virtual Eigen::MatrixXd linearization_buffer() const;
+  virtual DifferentialReprType linearization_buffer() const;
 
 protected:
   virtual MapBase *clone_impl() const = 0;
