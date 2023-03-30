@@ -3,6 +3,7 @@
 
 class RealsAtlas {
 public:
+  static const constexpr bool is_differential_sparse = false;
   using Representation = double;
   using Coordinates = double;
   using ChartDifferential = Eigen::Matrix<double, 1, 1>;

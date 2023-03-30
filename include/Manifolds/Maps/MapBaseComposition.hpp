@@ -72,6 +72,22 @@ public:
   std::size_t get_dom_tangent_repr_dim() const override;
   std::size_t get_codom_tangent_repr_dim() const override;
 
+  DifferentialReprType linearization_buffer() const override {
+    if (is_differential_sparse()) {
+      return Eigen::SparseMatrix<double>(get_codom_tangent_repr_dim(),
+                                         get_dom_tangent_repr_dim());
+    } else {
+
+      return Eigen::MatrixXd(get_codom_tangent_repr_dim(),
+                             get_dom_tangent_repr_dim());
+    }
+  }
+  virtual bool is_differential_sparse() const override {
+    return std::all_of(maps_.begin(), maps_.end(), [](const auto &in) {
+      return in->is_differential_sparse();
+    });
+  }
+
 protected:
   std::vector<std::unique_ptr<MapBase>> maps_;
   mutable std::vector<std::unique_ptr<ManifoldBase>> codomain_buffers_;

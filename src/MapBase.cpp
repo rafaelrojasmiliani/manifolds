@@ -36,8 +36,4 @@ std::unique_ptr<ManifoldBase> MapBase::domain_buffer() const {
   return std::unique_ptr<ManifoldBase>(domain_buffer_impl());
 }
 
-Eigen::MatrixXd MapBase::linearization_buffer() const {
-  return Eigen::MatrixXd::Zero(get_codom_tangent_repr_dim(),
-                               get_dom_tangent_repr_dim());
-}
 } // namespace manifolds

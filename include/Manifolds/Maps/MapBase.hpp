@@ -60,7 +60,8 @@ public:
   virtual std::size_t get_codom_tangent_repr_dim() const = 0;
 
   // Here, change to Variant of dense and sparse matrix
-  virtual DifferentialReprType linearization_buffer() const;
+  virtual DifferentialReprType linearization_buffer() const = 0;
+  virtual bool is_differential_sparse() const = 0;
 
 protected:
   virtual MapBase *clone_impl() const = 0;

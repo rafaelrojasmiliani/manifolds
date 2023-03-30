@@ -10,9 +10,10 @@ namespace manifolds {
 template <std::size_t N>
 class CanonicPolynomial
     : public ManifoldInheritanceHelper<CanonicPolynomial<N>, LinearManifold<N>>,
-      public MapInheritanceHelper<CanonicPolynomial<N>, Map<Reals, Reals>> {
-  template <typename T, typename U> friend class Map;
-  template <typename T, typename U> friend class MapComposition;
+      public MapInheritanceHelper<CanonicPolynomial<N>,
+                                  Map<Reals, Reals, false>> {
+  template <typename T, typename U, bool is> friend class Map;
+  template <typename T, typename U, bool is> friend class MapComposition;
 
   using base_t =
       ManifoldInheritanceHelper<CanonicPolynomial<N>, LinearManifold<N>>;

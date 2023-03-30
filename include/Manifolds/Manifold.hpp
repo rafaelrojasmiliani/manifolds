@@ -11,8 +11,8 @@ template <typename Atlas, bool Faithfull = false>
 class Manifold : public ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>,
                                                   ManifoldBase>,
                  public Atlas {
-  template <typename T, typename U> friend class Map;
-  template <typename T, typename U> friend class MapComposition;
+  template <typename T, typename U, bool IS> friend class Map;
+  template <typename T, typename U, bool IS> friend class MapComposition;
 
   using base_t =
       ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>, ManifoldBase>;

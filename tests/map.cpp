@@ -60,7 +60,7 @@ TEST(Map, Identity) {
   EXPECT_TRUE(
       static_cast<R3 *>(dom_buff_ptr.get())->crepr().isApprox(p1.crepr()));
 
-  Eigen::MatrixXd m1 = id.linearization_buffer();
+  Eigen::MatrixXd m1 = std::get<0>(id.linearization_buffer());
   EXPECT_EQ(m1.rows(), R3::tangent_repr_dimension);
   EXPECT_EQ(m1.cols(), R3::tangent_repr_dimension);
 

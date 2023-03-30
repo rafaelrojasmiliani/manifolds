@@ -2,6 +2,7 @@
 #pragma once
 template <long Rows, long Cols> class LinearManifoldAtlas {
 public:
+  static const constexpr bool is_differential_sparse = false;
   using Representation = Eigen::Matrix<double, Rows, Cols>;
   using Coordinates = Eigen::Matrix<double, Rows * Cols, 1>;
 

@@ -10,8 +10,23 @@
 #include <memory>
 
 namespace manifolds {
+namespace detail {
 
-template <typename DomainType, typename CoDomainType>
+// -------------------------------------
+/// Diferential type snifae
+// -------------------------------------
+template <bool Val, std::size_t DomainDim, std::size_t CodomainDim>
+struct DT {};
+template <std::size_t DomainDim, std::size_t CodomainDim>
+struct DT<true, DomainDim, CodomainDim> {
+  using Type = Eigen::SparseMatrix<double>;
+};
+template <std::size_t DomainDim, std::size_t CodomainDim>
+struct DT<false, DomainDim, CodomainDim> {
+  using Type = Eigen::Matrix<double, CodomainDim, DomainDim>;
+};
+} // namespace detail
+template <typename DomainType, typename CoDomainType, bool IsDiffSparse>
 class Map : virtual public MapBase {
   static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>,
                 "The codomain must inherit from ManifoldBase");
@@ -23,10 +38,12 @@ public:
   using Codomain_t = CoDomainType;
 
   using Differential_t =
-      Eigen::Matrix<double, Codomain_t::tangent_repr_dimension,
-                    Domain_t::tangent_repr_dimension>;
+      typename detail::DT<IsDiffSparse, Codomain_t::tangent_repr_dimension,
+                          Domain_t::tangent_repr_dimension>::Type;
 
+  // -------------------------------------
   // Default lifecycle
+  // -------------------------------------
   Map() = default;
   Map(const Map &_that) = default;
   Map(Map &&_that) = default;
@@ -175,22 +192,44 @@ public:
   }
 
   // ---------------------------------
+  // Differntial
+  // ---------------------------------
+  DifferentialReprType linearization_buffer() const override {
+    if constexpr (IsDiffSparse) {
+      return Differential_t(Codomain_t::tangent_repr_dimension,
+                            Domain_t::tangent_repr_dimension);
+    } else {
+      return Differential_t();
+    }
+  }
+  bool is_differential_sparse() const override { return IsDiffSparse; }
+
+  // ---------------------------------
   // Defintion of out diff(in)
   // ---------------------------------
   template <bool F = (not DomainType::is_faithfull)>
-  std::enable_if_t<F, typename Eigen::MatrixXd>
-  diff(const DomainType &_in) const {
-    Eigen::MatrixXd result = this->linearization_buffer();
-    diff(_in, result);
-    return result;
+  std::enable_if_t<F, Differential_t> diff(const DomainType &_in) const {
+    DifferentialReprType result = this->linearization_buffer();
+    if constexpr (IsDiffSparse) {
+      diff(_in, std::get<1>(result));
+      return std::get<1>(result);
+    } else {
+      diff(_in, std::get<0>(result));
+      return std::get<0>(result);
+    }
   }
 
   template <bool F = (DomainType::is_faithfull)>
-  std::enable_if_t<F, typename Eigen::MatrixXd>
+  std::enable_if_t<F, Differential_t>
   diff(const typename DomainType::Representation &_in) const {
-    Eigen::MatrixXd result = this->linearization_buffer();
-    diff(_in, result);
-    return result;
+    DifferentialReprType result = this->linearization_buffer();
+    if constexpr (IsDiffSparse) {
+      diff(_in, std::get<1>(result));
+      return std::get<1>(result);
+    } else {
+      diff(_in, std::get<0>(result));
+      return std::get<0>(result);
+    }
   }
 
   // ---------------------------------
@@ -198,22 +237,31 @@ public:
   // ---------------------------------
   template <bool F = (not DomainType::is_faithfull)>
   std::enable_if_t<F, bool> diff(const DomainType &_in,
-                                 DifferentialReprRefType _out) const {
-    return diff_from_repr(_in.crepr(), _out);
+                                 Differential_t _out) const {
+    if constexpr (IsDiffSparse) {
+      return diff_from_repr(_in.crepr(), std::get<1>(_out));
+    } else
+      return diff_from_repr(_in.crepr(), std::get<0>(_out));
   }
   template <bool F = DomainType::is_faithfull>
   std::enable_if_t<F, bool> diff(const typename DomainType::Representation &_in,
                                  DifferentialReprRefType _out) const {
-    return diff_from_repr(_in, _out);
+    if constexpr (IsDiffSparse) {
+      return diff_from_repr(_in, std::get<1>(_out));
+    } else
+      return diff_from_repr(_in, std::get<0>(_out));
   }
 
-  template <typename OtherDomainType>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(const Map<DomainType, OtherDomainType> &_in) const {
+  template <typename OtherDomainType, bool OtherDiffIsSparse>
+  MapComposition<CoDomainType, OtherDomainType,
+                 IsDiffSparse && OtherDiffIsSparse>
+  compose(
+      const Map<DomainType, OtherDomainType, OtherDiffIsSparse> &_in) const {
     static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
     static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
 
-    auto a = MapComposition<CoDomainType, DomainType>(*this);
+    auto a = MapComposition < CoDomainType, DomainType,
+         IsDiffSparse && OtherDiffIsSparse > (*this);
 
     return a.compose(_in);
   }
@@ -267,7 +315,8 @@ protected:
 };
 
 template <typename Set>
-class Identity : public MapInheritanceHelper<Identity<Set>, Map<Set, Set>> {
+class Identity
+    : public MapInheritanceHelper<Identity<Set>, Map<Set, Set, false>> {
 public:
   static_assert(std::is_base_of_v<ManifoldBase, Set>);
   Identity() = default;
@@ -283,8 +332,9 @@ protected:
   }
   bool diff_from_repr(const typename Set::Representation &,
                       DifferentialReprRefType _mat) const override {
-    std::get<0>(_mat).noalias() = Map<Set, Set>::Differential_t::Identity(
-        Set::tangent_repr_dimension, Set::tangent_repr_dimension);
+    std::get<0>(_mat).noalias() =
+        Map<Set, Set, false>::Differential_t::Identity(
+            Set::tangent_repr_dimension, Set::tangent_repr_dimension);
     return true;
   }
 };

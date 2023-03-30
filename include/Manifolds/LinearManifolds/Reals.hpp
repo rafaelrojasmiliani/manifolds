@@ -7,8 +7,8 @@
 namespace manifolds {
 
 class Reals : public Manifold<RealsAtlas, true> {
-  template <typename T, typename U> friend class Map;
-  template <typename T, typename U> friend class MapComposition;
+  template <typename T, typename U, bool s> friend class Map;
+  template <typename T, typename U, bool s> friend class MapComposition;
 
 public:
   using Manifold<RealsAtlas, true>::Manifold;
@@ -16,7 +16,7 @@ public:
 };
 
 class Reals::Lifting
-    : public MapInheritanceHelper<Reals::Lifting, Map<Reals, Reals>> {
+    : public MapInheritanceHelper<Reals::Lifting, Map<Reals, Reals, false>> {
 public:
   Lifting(const std::function<double(double)> &_value,
           const std::function<double(double)> &_derivative)

@@ -11,7 +11,8 @@ template <typename Atlas, bool Faithfull>
 class Manifold<Atlas, Faithfull>::Chart
     : public MapInheritanceHelper<
           Manifold<Atlas, Faithfull>::Chart,
-          Map<Manifold<Atlas, Faithfull>, LinearManifold<Atlas::dimension>>> {
+          Map<Manifold<Atlas, Faithfull>, LinearManifold<Atlas::dimension>,
+              Atlas::is_differential_sparse>> {
 
   friend Manifold<Atlas, Faithfull>::Parametrization;
 
@@ -53,7 +54,8 @@ class Manifold<Atlas, Faithfull>::ChangeOfCoordinates
     : public MapInheritanceHelper<
           Manifold<Atlas, Faithfull>::ChangeOfCoordinates,
           Map<LinearManifold<Atlas::dimension>,
-              LinearManifold<Atlas::dimension>>> {
+              LinearManifold<Atlas::dimension>,
+              Atlas::is_differential_sparse>> {
 private:
   Representation point1A_;
   Representation point2A_;
@@ -94,7 +96,8 @@ template <typename Atlas, bool Faithfull>
 class Manifold<Atlas, Faithfull>::Parametrization
     : public MapInheritanceHelper<
           Manifold<Atlas, Faithfull>::Parametrization,
-          Map<LinearManifold<Atlas::dimension>, Manifold<Atlas, Faithfull>>> {
+          Map<LinearManifold<Atlas::dimension>, Manifold<Atlas, Faithfull>,
+              Atlas::is_differential_sparse>> {
 private:
   Representation point1_;
   Representation point2_;

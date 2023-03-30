@@ -45,7 +45,7 @@ TEST(MapComposition, Base) {
                     ->crepr()
                     .isApprox(static_cast<R3 *>(pb_ptr.get())->crepr()));
 
-    Eigen::MatrixXd d = mc.linearization_buffer();
+    Eigen::MatrixXd d = std::get<0>(mc.linearization_buffer());
 
     mc.diff(pa_ptr, d);
     EXPECT_TRUE(d.isApprox(Eigen::Matrix<double, 3, 3>::Identity()));

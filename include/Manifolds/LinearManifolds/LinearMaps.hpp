@@ -11,7 +11,7 @@ class LinearMap
           MatrixManifold<CodomainDim, DomainDim>>,
       public MapInheritanceHelper<
           LinearMap<DomainDim, CodomainDim>,
-          Map<LinearManifold<DomainDim>, LinearManifold<CodomainDim>>> {
+          Map<LinearManifold<DomainDim>, LinearManifold<CodomainDim>, false>> {
 public:
   using base_t =
       LinearManifoldInheritanceHelper<LinearMap<DomainDim, CodomainDim>,
