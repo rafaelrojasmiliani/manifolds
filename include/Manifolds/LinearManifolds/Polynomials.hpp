@@ -62,6 +62,7 @@ class PWCanonicPolynomial
 public:
   using base_t::base_t;
   bool value_on_repr(const double &_in, double &_result) const override {
+
     int j;
 
     const auto &c = this->crepr();
@@ -71,6 +72,7 @@ public:
     _result = p;
     return true;
   }
+
   virtual bool diff_from_repr(const double &_in,
                               Eigen::Ref<Eigen::MatrixXd> _mat) const override {
 
