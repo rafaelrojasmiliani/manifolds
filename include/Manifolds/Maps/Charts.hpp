@@ -38,9 +38,11 @@ private:
     Atlas::chart(point1_, point2_, _in, _result);
     return true;
   }
-  virtual bool diff_from_repr(const DomainRepr &_in,
-                              DifferentialReprRefType _mat) const override {
-    Atlas::chart_diff(point1_, point2_, _in, std::get<0>(_mat));
+  virtual bool
+  diff_from_repr(const DomainRepr &_in,
+                 detail::DifferentialReprRef_t<Atlas::is_differential_sparse>
+                     _mat) const override {
+    Atlas::chart_diff(point1_, point2_, _in, _mat);
 
     return true;
   }
@@ -80,10 +82,12 @@ private:
                                  _result);
     return true;
   }
-  virtual bool diff_from_repr(const DomainRepr &_in,
-                              DifferentialReprRefType _mat) const override {
+  virtual bool
+  diff_from_repr(const DomainRepr &_in,
+                 detail::DifferentialReprRef_t<Atlas::is_differential_sparse>
+                     _mat) const override {
     Atlas::change_of_coordinates_diff(point1A_, point2A_, point1B_, point2B_,
-                                      _in, std::get<0>(_mat));
+                                      _in, _mat);
 
     return true;
   }
@@ -125,9 +129,11 @@ private:
     Atlas::param(point1_, point2_, _in, _result);
     return true;
   }
-  virtual bool diff_from_repr(const DomainRepr &_in,
-                              DifferentialReprRefType _mat) const override {
-    Atlas::param_diff(point1_, point2_, _in, std::get<0>(_mat));
+  virtual bool
+  diff_from_repr(const DomainRepr &_in,
+                 detail::DifferentialReprRef_t<Atlas::is_differential_sparse>
+                     _mat) const override {
+    Atlas::param_diff(point1_, point2_, _in, _mat);
 
     return true;
   }

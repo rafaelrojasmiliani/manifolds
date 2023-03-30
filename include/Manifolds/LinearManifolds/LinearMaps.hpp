@@ -46,10 +46,11 @@ public:
     return true;
   }
 
-  virtual bool diff_from_repr(const Eigen::Matrix<double, DomainDim, 1> &,
-                              DifferentialReprRefType _mat) const override {
+  virtual bool
+  diff_from_repr(const Eigen::Matrix<double, DomainDim, 1> &,
+                 detail::DifferentialReprRef_t<false> _mat) const override {
 
-    std::get<0>(_mat) = this->crepr();
+    _mat = this->crepr();
     return true;
   }
   virtual ~LinearMap() = default;

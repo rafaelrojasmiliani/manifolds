@@ -20,11 +20,22 @@ struct DT {};
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<true, DomainDim, CodomainDim> {
   using Type = Eigen::SparseMatrix<double>;
+  using RefType = std::reference_wrapper<Eigen::SparseMatrix<double>>;
 };
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<false, DomainDim, CodomainDim> {
   using Type = Eigen::Matrix<double, CodomainDim, DomainDim>;
+  using RefType = Eigen::Ref<Eigen::MatrixXd>;
 };
+
+template <bool IsDiffSparse, std::size_t DomainDim, std::size_t CodomainDim>
+using DifferentialRepr_t =
+    typename DT<IsDiffSparse, DomainDim, CodomainDim>::Type;
+template <bool IsDiffSparse, std::size_t DomainDim = 0,
+          std::size_t CodomainDim = 0>
+using DifferentialReprRef_t =
+    typename DT<IsDiffSparse, DomainDim, CodomainDim>::RefType;
+
 } // namespace detail
 template <typename DomainType, typename CoDomainType, bool IsDiffSparse>
 class Map : virtual public MapBase {
@@ -296,8 +307,12 @@ protected:
   }
   bool diff_impl(const ManifoldBase *_in,
                  DifferentialReprRefType _mat) const override {
-
-    return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
+    if constexpr (IsDiffSparse)
+      return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(),
+                            std::get<1>(_mat));
+    else
+      return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(),
+                            std::get<0>(_mat));
   }
   virtual ManifoldBase *domain_buffer_impl() const override {
     return new Domain_t();
@@ -310,8 +325,11 @@ protected:
   virtual bool
   value_on_repr(const typename DomainType::Representation &_in,
                 typename CoDomainType::Representation &_result) const = 0;
-  virtual bool diff_from_repr(const typename DomainType::Representation &_in,
-                              DifferentialReprRefType _mat) const = 0;
+  virtual bool diff_from_repr(
+      const typename DomainType::Representation &_in,
+      detail::DifferentialReprRef_t<IsDiffSparse, Domain_t::dimension,
+                                    Codomain_t::dimension>
+          _mat) const = 0;
 };
 
 template <typename Set>
@@ -331,10 +349,9 @@ protected:
     return true;
   }
   bool diff_from_repr(const typename Set::Representation &,
-                      DifferentialReprRefType _mat) const override {
-    std::get<0>(_mat).noalias() =
-        Map<Set, Set, false>::Differential_t::Identity(
-            Set::tangent_repr_dimension, Set::tangent_repr_dimension);
+                      Eigen::Ref<Eigen::MatrixXd> _mat) const override {
+    _mat.noalias() = Map<Set, Set, false>::Differential_t::Identity(
+        Set::tangent_repr_dimension, Set::tangent_repr_dimension);
     return true;
   }
 };

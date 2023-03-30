@@ -14,11 +14,22 @@ struct DT {};
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<true, DomainDim, CodomainDim> {
   using Type = Eigen::SparseMatrix<double>;
+  using RefType = std::reference_wrapper<Eigen::SparseMatrix<double>>;
 };
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<false, DomainDim, CodomainDim> {
   using Type = Eigen::Matrix<double, CodomainDim, DomainDim>;
+  using RefType = Eigen::Ref<Eigen::MatrixXd>;
 };
+
+template <bool IsDiffSparse, std::size_t DomainDim, std::size_t CodomainDim>
+using DifferentialRepr_t =
+    typename DT<IsDiffSparse, DomainDim, CodomainDim>::Type;
+template <bool IsDiffSparse, std::size_t DomainDim = 0,
+          std::size_t CodomainDim = 0>
+using DifferentialReprRef_t =
+    typename DT<IsDiffSparse, DomainDim, CodomainDim>::RefType;
+
 } // namespace detail_composition
 template <typename DomainType, typename CoDomainType, bool IsDiffSparse>
 class Map;
@@ -179,8 +190,10 @@ protected:
     auto m2 = CoDomainType::Ref(_result);
     return value_impl(&m1, &m2);
   }
-  virtual bool diff_from_repr(const typename DomainType::Representation &_in,
-                              DifferentialReprRefType _mat) const override {
+  virtual bool
+  diff_from_repr(const typename DomainType::Representation &_in,
+                 detail_composition::DifferentialReprRef_t<IsDiffSparse> _mat)
+      const override {
     DomainType m1(_in);
     return diff_impl(&m1, _mat);
   }
