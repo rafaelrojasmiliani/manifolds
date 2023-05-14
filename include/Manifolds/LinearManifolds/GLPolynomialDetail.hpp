@@ -172,7 +172,7 @@ get_first(std::array<std::pair<double, double>,
     result[index] = el.first;
     ++index;
   }
-  constexpr std::size_t book_n = NumPoints - 1;
+  // constexpr std::size_t book_n = NumPoints - 1;
 
   std::size_t index2 = index - 1;
   if ((NumPoints - 1) % 2u == 0) {
@@ -204,29 +204,18 @@ get_second(std::array<std::pair<double, double>,
 
   std::size_t index2 = index - 1;
   if ((NumPoints - 1) % 2u == 0) {
-    auto m = q_and_evaluation<NumPoints - 1>(lhs[(NumPoints - 1) / 2].first);
+    auto m = q_and_evaluation<NumPoints - 1>(0.0);
     result[(NumPoints - 1) / 2] =
-        2.0 / ((double)book_n * ((double)book_n + 1.0) *
-               gcem::pow(std::get<2>(m), 2.0));
+        2.0 / ((double)book_n * ((double)book_n + 1.0) * std::get<2>(m) *
+               std::get<2>(m));
     index++;
   }
+
   while (index < NumPoints) {
     result[index] = result[index2];
     index++;
     index2--;
   }
-  return result;
-}
-
-template <std::size_t NumPoints>
-constexpr std::array<std::pair<double, double>, NumPoints> compute_glp_aux() {
-
-  constexpr std::size_t a = static_cast<int>(((double)(NumPoints)) / 2.0) - 1;
-
-  constexpr auto half = make_array<a + 1>(compute_single_glp<NumPoints - 1>);
-
-  constexpr auto result =
-      concat_pairs<std::pair<double, double>, NumPoints>(half);
 
   return result;
 }
@@ -234,7 +223,8 @@ constexpr std::array<std::pair<double, double>, NumPoints> compute_glp_aux() {
 template <std::size_t NumPoints>
 constexpr std::array<double, NumPoints> compute_glp() {
 
-  constexpr std::size_t a = static_cast<int>(((double)(NumPoints)) / 2.0) - 1;
+  constexpr std::size_t a =
+      static_cast<std::size_t>(((double)(NumPoints)) / 2.0) - 1;
 
   constexpr auto half = make_array<a + 1>(compute_single_glp<NumPoints - 1>);
 
@@ -245,7 +235,8 @@ constexpr std::array<double, NumPoints> compute_glp() {
 template <std::size_t NumPoints>
 constexpr std::array<double, NumPoints> compute_glw() {
 
-  constexpr std::size_t a = static_cast<int>(((double)(NumPoints)) / 2.0) - 1;
+  constexpr std::size_t a =
+      static_cast<std::size_t>(((double)(NumPoints)) / 2.0) - 1;
 
   constexpr auto half = make_array<a + 1>(compute_single_glp<NumPoints - 1>);
 
@@ -253,10 +244,11 @@ constexpr std::array<double, NumPoints> compute_glw() {
 
   return result;
 }
-template <>
-constexpr std::array<std::pair<double, double>, 2> compute_glp_aux() {
-  return {std::make_pair(-1.0, 1.0), std::make_pair(1.0, 1.0)};
-}
+
+template <> constexpr std::array<double, 0> compute_glp() { return {}; }
+template <> constexpr std::array<double, 0> compute_glw() { return {}; }
+template <> constexpr std::array<double, 1> compute_glp() { return {0.0}; }
+template <> constexpr std::array<double, 1> compute_glw() { return {2.0}; }
 template <> constexpr std::array<double, 2> compute_glp() {
   return {-1.0, 1.0};
 }
@@ -285,14 +277,14 @@ barycentric_weights(std::array<double, N> _points) {
    *  Algorithm 30: BarycentricWeights: Weights for Lagrange Interpolation*/
   std::array<double, N> result(create_array<N, double>(1.0));
 
-  for (std::size_t uicj = 1; uicj < _points.size(); uicj++) {
+  for (std::size_t uicj = 1; uicj < N; uicj++) {
     for (std::size_t uick = 0; uick < uicj; uick++) {
       result[uick] = result[uick] * (_points[uick] - _points[uicj]);
       result[uicj] = result[uicj] * (_points[uicj] - _points[uick]);
     }
   }
 
-  for (std::size_t uicj = 1; uicj < _points.size(); uicj++) {
+  for (std::size_t uicj = 0; uicj < N; uicj++) {
     result[uicj] = 1.0 / result[uicj];
   }
 
@@ -325,9 +317,9 @@ derivative_matrix(std::array<double, N> _points) {
   return result;
 }
 
-template <std::size_t N, std::size_t Deg>
+template <std::size_t N, std::size_t M>
 constexpr std::array<double, N * N>
-derivative_matrix_m(std::array<double, N> _points) {
+derivative_matrix_order_m(std::array<double, N> _points) {
   /*  David A. Kopriva
    *  Implementing Spectral
    *  Methods for Partial
@@ -339,7 +331,7 @@ derivative_matrix_m(std::array<double, N> _points) {
 
   std::array<double, N> bw = barycentric_weights(_points);
 
-  for (std::size_t uick = 2; uick <= Deg; uick++) {
+  for (std::size_t uick = 2; uick <= M; uick++) {
     for (std::size_t uici = 0; uici < _points.size(); uici++) {
       result[uici + N * uici] = 0;
       for (std::size_t uicj = 0; uicj < _points.size(); uicj++) {

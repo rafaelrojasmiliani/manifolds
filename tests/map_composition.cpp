@@ -68,9 +68,10 @@ TEST(MapComposition, Composition) {
   R3 p1(Eigen::Vector3d::Random());
 
   Identity<R3> id;
-  id.compose(id);
 
-  R3 p2 = id(p1);
+  auto id2 = id.compose(id);
+
+  R3 p2 = id2(p1);
 
   EXPECT_TRUE(p1.crepr().isApprox(p2.crepr()));
 }

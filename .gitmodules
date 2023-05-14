@@ -1,3 +1,6 @@
 [submodule "python/submodules/code_generator"]
 	path = python/submodules/code_generator
 	url = git@github.com:rafaelrojasmiliani/code_generator.git
+[submodule "submodules/fpm"]
+	path = submodules/fpm
+	url = https://github.com/MikeLankamp/fpm.git

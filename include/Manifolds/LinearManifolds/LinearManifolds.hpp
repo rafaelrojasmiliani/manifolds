@@ -11,34 +11,52 @@ private:
   using ThisClass = LinearManifoldInheritanceHelper<Current, Base>;
 
 public:
+  /// Representation type from its base
   using Representation = typename Base::Representation;
+
+  /// Implement the constructor of its base class
   using Base::Base;
+
+  /// Copy constructor
   LinearManifoldInheritanceHelper(const ThisClass &_in) : Base(_in) {}
+
+  /// Move constructor
   LinearManifoldInheritanceHelper(ThisClass &&_in) : Base(std::move(_in)) {}
+
+  /// Default constructor
   virtual ~LinearManifoldInheritanceHelper() = default;
 
+  /// Clone
   std::unique_ptr<Current> clone() const {
     return std::unique_ptr<Current>(clone_impl());
   }
 
+  /// Move clone
   std::unique_ptr<Current> move_clone() {
     return std::unique_ptr<Current>(move_clone_impl());
   }
 
+  /// Implement assigment operator of the base
   using Base::operator=;
 
+  /// Assigment operator
   ThisClass &operator=(const ThisClass &that) {
     Base::operator=(that);
     return *this;
   }
+
+  /// Assigment move operator
   ThisClass &operator=(ThisClass &&that) {
     Base::operator=(std::move(that));
     return *this;
   }
 
+  /// Sum operation
   inline auto operator+(const Representation &that) const & {
     return Base::crepr() + that;
   }
+
+  /// Sum operation
   inline auto operator+(const Representation &that) && {
     return std::move(Base::mrepr()) + that;
   }
@@ -46,6 +64,7 @@ public:
   inline auto operator+(Representation &&that) const & {
     return Base::crepr() + std::move(that);
   }
+
   inline auto operator+(Representation &&that) && {
     return std::move(Base::mrepr()) + std::move(that);
   }
@@ -61,6 +80,33 @@ public:
   }
 
   inline void operator*=(double that) { Base::repr() *= that; }
+
+  bool operator==(const Current &that) {
+
+    static typename Current::Representation diff_buffer;
+    double _tol = 1.0e-12;
+    diff_buffer = this->crepr() - that.crepr();
+    double err = 0;
+    double lhs_max = 0;
+    double rhs_max = 0;
+    if constexpr (std::is_same_v<typename Current::Representation, double>) {
+      err = std::fabs(diff_buffer);
+      lhs_max = std::fabs(this->crepr());
+      rhs_max = std::fabs(that.crepr());
+    } else {
+      err = diff_buffer.array().abs().maxCoeff();
+      lhs_max = (this->crepr()).array().abs().maxCoeff();
+      rhs_max = (that.crepr()).array().abs().maxCoeff();
+    }
+
+    if (lhs_max < _tol or rhs_max < _tol) {
+      return err < _tol;
+    }
+
+    return err / lhs_max < _tol and err / rhs_max < _tol;
+  }
+
+  bool operator!=(const Current &that) { return not(*this == that); }
 
 protected:
   virtual ManifoldBase *clone_impl() const override {
@@ -90,9 +136,16 @@ auto operator*(double m, const LinearManifoldInheritanceHelper<C, B> &that) {
 /* } */
 
 template <long Rows, long Cols>
-class MatrixManifold : public LinearManifoldInheritanceHelper<
-                           MatrixManifold<Rows, Cols>,
-                           Manifold<LinearManifoldAtlas<Rows, Cols>, true>> {
+using RealTuplesBase = Manifold<LinearManifoldAtlas<Rows, Cols>, true>;
+
+template <long Rows, long Cols>
+using SparseRealTuplesBase =
+    Manifold<SparseLinearManifoldAtlas<Rows, Cols>, true>;
+
+template <long Rows, long Cols>
+class MatrixManifold
+    : public LinearManifoldInheritanceHelper<MatrixManifold<Rows, Cols>,
+                                             RealTuplesBase<Rows, Cols>> {
 public:
   using base_t = LinearManifoldInheritanceHelper<
       MatrixManifold<Rows, Cols>,
@@ -110,6 +163,29 @@ public:
   MatrixManifold(const MatrixManifold &_in) : base_t(_in) {}
   MatrixManifold(MatrixManifold &&_in) : base_t(std::move(_in)) {}
   virtual ~MatrixManifold() = default;
+};
+
+template <long Rows, long Cols>
+class SparseMatrixManifold
+    : public LinearManifoldInheritanceHelper<SparseMatrixManifold<Rows, Cols>,
+                                             SparseRealTuplesBase<Rows, Cols>> {
+public:
+  using base_t = LinearManifoldInheritanceHelper<
+      MatrixManifold<Rows, Cols>,
+      Manifold<LinearManifoldAtlas<Rows, Cols>, true>>;
+  using base_t::base_t;
+  using base_t::operator=;
+  const SparseMatrixManifold &operator=(const SparseMatrixManifold &that) {
+    base_t::operator=(that);
+    return *this;
+  }
+  const SparseMatrixManifold &operator=(SparseMatrixManifold &&that) {
+    base_t::operator=(std::move(that));
+    return *this;
+  }
+  SparseMatrixManifold(const SparseMatrixManifold &_in) : base_t(_in) {}
+  SparseMatrixManifold(SparseMatrixManifold &&_in) : base_t(std::move(_in)) {}
+  virtual ~SparseMatrixManifold() = default;
 };
 
 template <long Rows> using LinearManifold = MatrixManifold<Rows, 1>;

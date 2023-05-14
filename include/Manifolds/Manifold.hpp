@@ -62,7 +62,7 @@ public:
     *representation_ = _other.crepr();
     return *this;
   }
-  // Assignment with manifold operator
+  // Move assignment with manifold operator
   const Manifold &operator=(Manifold &&_other) {
     if (not representation_)
       throw std::logic_error("Trying to assign to a constnat manifold element");
@@ -73,7 +73,7 @@ public:
     return *this;
   }
 
-  // Assignment with representation
+  // Assignment with representation for faithfull manifolds
   template <bool F = Faithfull>
   std::enable_if_t<F, Manifold<Atlas, Faithfull>> &
   operator=(const Representation &_other) {
@@ -83,7 +83,7 @@ public:
     return *this;
   }
 
-  // Assignment with representation
+  // Move assignment with representation for faithfull manifolds
   template <bool F = Faithfull>
   std::enable_if_t<F, Manifold<Atlas, Faithfull>> &
   operator=(Representation &&_other) {
@@ -114,8 +114,7 @@ public:
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   // ++++++ Casting  and implicid Cast consturcotrs  +++++++++++++++++++++++++++
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  template <bool F = Faithfull>
-  constexpr operator const std::enable_if_t<F, Representation> &() const & {
+  constexpr operator const Representation &() const & {
     return *const_representation_;
   }
 
@@ -166,12 +165,17 @@ public:
   class ChangeOfCoordinates;
 
 private:
-  /// SNIFAE of constructors: Make non faithfull private
+  /// SNIFAE of constructors: Make non faithfull private. If the manifold is
+  /// not faithfull, the following constructor we be private, This is to avoid
+  /// constructing objects from its representation
+
+  // Cast constructor from representation
   template <bool F = Faithfull>
   constexpr Manifold(const std::enable_if_t<not F, Representation> &_in)
       : base_t(), representation_(new Representation(_in)),
         const_representation_(representation_), onwing_(true) {}
 
+  // Cast-move constructor from representation
   template <bool F = Faithfull>
   constexpr Manifold(std::enable_if_t<not F, Representation> &&_in)
       : base_t(), representation_(new Representation(std::move(_in))),

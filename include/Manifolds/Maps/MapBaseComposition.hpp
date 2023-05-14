@@ -1,5 +1,6 @@
 #pragma once
 #include <Manifolds/Maps/MapBase.hpp>
+
 namespace manifolds {
 
 /// Base clase to implement type agnostic composition of maps.
@@ -61,6 +62,7 @@ public:
   // -------- Modifiers  -----------------------
   // -------------------------------------------
   void append(const MapBase &_in);
+
   void append(MapBase &&_in);
 
   // -------------------------------------------
@@ -82,7 +84,7 @@ public:
                              get_dom_tangent_repr_dim());
     }
   }
-  virtual bool is_differential_sparse() const override {
+  bool is_differential_sparse() const override {
     return std::all_of(maps_.begin(), maps_.end(), [](const auto &in) {
       return in->is_differential_sparse();
     });
@@ -106,7 +108,6 @@ protected:
 
   bool value_impl(const ManifoldBase *_in, ManifoldBase *_other) const override;
 
-  // Here, change to Variant of dense and sparse matrix
   bool diff_impl(const ManifoldBase *_in,
                  DifferentialReprRefType _mat) const override;
 

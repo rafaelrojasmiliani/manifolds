@@ -46,7 +46,6 @@ public:
 
   std::unique_ptr<MapBase> move_clone();
 
-  // Here, change to Variant of dense and sparse matrix
   bool diff(const std::unique_ptr<ManifoldBase> &_in,
             DifferentialReprRefType _mat) const;
 
@@ -59,7 +58,6 @@ public:
   virtual std::size_t get_codom_dim() const = 0;
   virtual std::size_t get_codom_tangent_repr_dim() const = 0;
 
-  // Here, change to Variant of dense and sparse matrix
   virtual DifferentialReprType linearization_buffer() const = 0;
   virtual bool is_differential_sparse() const = 0;
 

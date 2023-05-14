@@ -48,6 +48,9 @@ public:
   using Domain_t = DomainType;
   using Codomain_t = CoDomainType;
 
+  static constexpr std::size_t domain_dimension = DomainType::dimension;
+  static constexpr std::size_t codomain_dimension = CoDomainType::dimension;
+
   using Differential_t =
       typename detail::DT<IsDiffSparse, Codomain_t::tangent_repr_dimension,
                           Domain_t::tangent_repr_dimension>::Type;
@@ -299,12 +302,17 @@ public:
   }
 
 protected:
+  /// Implementation of differentiation of for MapBase. This is a
+  /// representaiton-agnostic evaluation.
   bool value_impl(const ManifoldBase *_in,
                   ManifoldBase *_other) const override {
 
     return value_on_repr(static_cast<const DomainType *>(_in)->crepr(),
                          static_cast<CoDomainType *>(_other)->repr());
   }
+
+  /// Implementation of differentiation of for MapBase. This is a
+  /// representaiton-agnostic evaluation.
   bool diff_impl(const ManifoldBase *_in,
                  DifferentialReprRefType _mat) const override {
     if constexpr (IsDiffSparse)
@@ -314,17 +322,28 @@ protected:
       return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(),
                             std::get<0>(_mat));
   }
+
+  /// Get a pointer with an instance of the domain. Override if you have a
+  /// custom domain
   virtual ManifoldBase *domain_buffer_impl() const override {
     return new Domain_t();
   }
+
+  /// Get a pointer with an instance of the codomain. Override if you have
+  /// custom codomain
   virtual ManifoldBase *codomain_buffer_impl() const override {
     return new Codomain_t();
   }
 
 protected:
+  /// Function to copmute the result of the map using just the representation
+  /// types
   virtual bool
   value_on_repr(const typename DomainType::Representation &_in,
                 typename CoDomainType::Representation &_result) const = 0;
+
+  /// Function to copmute the result of the map differential using just the
+  /// representation types
   virtual bool diff_from_repr(
       const typename DomainType::Representation &_in,
       detail::DifferentialReprRef_t<IsDiffSparse, Domain_t::dimension,

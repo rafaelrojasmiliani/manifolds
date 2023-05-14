@@ -152,6 +152,9 @@ public:
     return result;
   }
 
+  // -------------------------------------------
+  // -------- Buffer of the differential -------
+  // -------------------------------------------
   DifferentialReprType linearization_buffer() const override {
     if constexpr (IsDiffSparse) {
       return Differential_t(CoDomainType::tangent_repr_dimension,
@@ -160,7 +163,7 @@ public:
       return Differential_t();
     }
   }
-  bool is_differential_sparse() const { return IsDiffSparse; }
+  bool is_differential_sparse() const override { return IsDiffSparse; }
 
 protected:
   // -------------------------------------------
