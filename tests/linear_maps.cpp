@@ -96,6 +96,15 @@ TEST(LinearMaps, Composition) {
   }
 }
 
+TEST(SparseLinearMaps, FaithfullManifolds) {
+  using T1 = SparseLinearManifold<50000>;
+  using T2 = SparseLinearManifold<500>;
+
+  using M = SparseLinearMap<T1, T2>;
+
+  M mat;
+}
+
 int main(int argc, char **argv) {
 
   ::testing::InitGoogleTest(&argc, argv);

@@ -170,9 +170,9 @@ class SparseMatrixManifold
     : public LinearManifoldInheritanceHelper<SparseMatrixManifold<Rows, Cols>,
                                              SparseRealTuplesBase<Rows, Cols>> {
 public:
-  using base_t = LinearManifoldInheritanceHelper<
-      MatrixManifold<Rows, Cols>,
-      Manifold<LinearManifoldAtlas<Rows, Cols>, true>>;
+  using base_t =
+      LinearManifoldInheritanceHelper<SparseMatrixManifold<Rows, Cols>,
+                                      SparseRealTuplesBase<Rows, Cols>>;
   using base_t::base_t;
   using base_t::operator=;
   const SparseMatrixManifold &operator=(const SparseMatrixManifold &that) {
@@ -189,6 +189,7 @@ public:
 };
 
 template <long Rows> using LinearManifold = MatrixManifold<Rows, 1>;
+template <long Rows> using SparseLinearManifold = SparseMatrixManifold<Rows, 1>;
 
 using R2 = MatrixManifold<2, 1>;
 using R3 = MatrixManifold<3, 1>;

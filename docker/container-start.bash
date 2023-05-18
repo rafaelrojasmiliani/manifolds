@@ -1,13 +1,12 @@
-
-main(){
+main() {
 
     scriptdir=$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)
     if [ "$scriptdir" != "$(pwd)" ]; then
-      echo "this script must be executed from $scriptdir".
-      exit 1
+        echo "this script must be executed from $scriptdir".
+        exit 1
     fi
 
-    if lspci | grep -qi "vga .*nvidia" && \
+    if lspci | grep -qi "vga .*nvidia" &&
         docker -D info 2>/dev/null | grep -qi "runtimes.* nvidia"; then
         DOCKER_NVIDIA_OPTIONS="\
             --runtime=nvidia \
@@ -27,13 +26,14 @@ main(){
     mygid=$(id -g $USER)
     mygroup=$(id -g -n $USER)
     myuser="$USER"
-    docker pull rafa606/cpp-vim-gsplines
+    image=rafa606/cpp-vim:22.04
+    docker pull $image
     docker run -it --rm \
         ${DOCKER_VIDEO_OPTIONS} \
         --volume $(pwd)/../:/workspace: \
         --entrypoint="/bin/bash" \
         --privileged \
-        "rafa606/cpp-vim" -c "addgroup --gid ${mygid} ${mygroup} --force-badname;  adduser --gecos \"\" --disabled-password  --uid ${myuid} --gid ${mygid} ${myuser} --force-badname ; usermod -a -G video ${myuser}; echo ${myuser} ALL=\(ALL\) NOPASSWD:ALL >> /etc/sudoers; cd /workspace; sudo -EHu ${myuser}  bash"
+        $image -c "addgroup --gid ${mygid} ${mygroup} --force-badname;  adduser --gecos \"\" --disabled-password  --uid ${myuid} --gid ${mygid} ${myuser} --force-badname ; usermod -a -G video ${myuser}; echo ${myuser} ALL=\(ALL\) NOPASSWD:ALL >> /etc/sudoers; cd /workspace; sudo -EHu ${myuser}  bash"
 }
 
 main

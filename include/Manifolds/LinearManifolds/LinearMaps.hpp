@@ -105,9 +105,9 @@ using End3 = LinearMap<R3, R3>;
 template <typename Domain, typename Codomain>
 class SparseLinearMap
     : public LinearManifoldInheritanceHelper<
-          LinearMap<Domain, Codomain>,
-          MatrixManifold<Codomain::dimension, Domain::dimension>>,
-      public MapInheritanceHelper<LinearMap<Domain, Codomain>,
+          SparseLinearMap<Domain, Codomain>,
+          SparseMatrixManifold<Codomain::dimension, Domain::dimension>>,
+      public MapInheritanceHelper<SparseLinearMap<Domain, Codomain>,
                                   Map<Domain, Codomain, false>> {
 
   // ------------------------
@@ -122,8 +122,8 @@ class SparseLinearMap
 
 public:
   using base_t = LinearManifoldInheritanceHelper<
-      LinearMap<Domain, Codomain>,
-      MatrixManifold<Codomain::dimension, Domain::dimension>>;
+      SparseLinearMap<Domain, Codomain>,
+      SparseMatrixManifold<Codomain::dimension, Domain::dimension>>;
 
   using Representation = typename base_t::Representation;
   using DomainRepresentation = typename Domain::Representation;

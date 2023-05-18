@@ -279,13 +279,16 @@ class PWGLVPolynomial
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
 
-  const std::pair<double, double> domain_interval_;
+  IntervalPartition<Intervals> domain_partition_;
 
 public:
+  // ----------------------------
+  // ------ Types ---------------
+  // ----------------------------
   using interval_t = std::pair<double, double>;
-  using base_t =
-      LinearManifoldInheritanceHelper<GLPolynomial<NumPoints>,
-                                      LinearManifold<NumPoints * CoDomainDim>>;
+  using base_t = LinearManifoldInheritanceHelper<
+      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+      LinearManifold<NumPoints * CoDomainDim * Intervals>>;
 
   using base_t::dimension;
   using base_t::operator=;
@@ -296,20 +299,11 @@ public:
     Eigen::Map<Eigen::Vector<double, CoDomainDim>> value;
   };
 
-  PWGLVPolynomial(const interval_t &domain);
-  PWGLVPolynomial(const interval_t &_domain,
-                  const Eigen::Vector<double, NumPoints> &val)
-      : base_t(val), domain_interval_(_domain) {}
+  class iterator;
 
-  PWGLVPolynomial(const PWGLVPolynomial &) = default;
-  PWGLVPolynomial(PWGLVPolynomial &&) = default;
-
-  const PWGLVPolynomial &operator=(const PWGLVPolynomial &that) {
-    domain_interval_ = that.domain_interval_;
-    base_t::operator=(that);
-    return *this;
-  }
-
+  // ----------------------------
+  // ------ Constants ---------------
+  // ----------------------------
   static constexpr std::array<double, NumPoints> gl_points =
       manifolds::collocation::detail::compute_glp<NumPoints>();
   static constexpr std::array<double, NumPoints> g_weights =
@@ -317,6 +311,27 @@ public:
   static constexpr std::array<double, NumPoints> barycentric_weights =
       manifolds::collocation::detail::barycentric_weights<NumPoints>(
           manifolds::collocation::detail::compute_glp<NumPoints>());
+
+  // ----------------------------
+  // ------ Live Cycle ---------------
+  // ----------------------------
+  PWGLVPolynomial() : base_t(), domain_partition_() {}
+
+  PWGLVPolynomial(const Interval &_domain)
+      : base_t(), domain_partition_(_domain) {}
+
+  PWGLVPolynomial(const Interval &_domain,
+                  const Eigen::Vector<double, dimension> &val)
+      : base_t(val), domain_partition_(_domain) {}
+
+  PWGLVPolynomial(const PWGLVPolynomial &) = default;
+  PWGLVPolynomial(PWGLVPolynomial &&) = default;
+
+  const PWGLVPolynomial &operator=(const PWGLVPolynomial &that) {
+    domain_partition_ = that.domain_partition_;
+    base_t::operator=(that);
+    return *this;
+  }
 
   static std::pair<long, long> range_for_pint_index(std::size_t _point_index) {
     std::pair<long, long> result;
@@ -339,6 +354,17 @@ public:
     if (_index > dimension)
       throw std::invalid_argument("");
   }
+
+  Eigen::Ref<Eigen::Vector<double, CoDomainDim>>
+  operator[](const std::size_t i) {
+    return this->repr().segment(i * CoDomainDim, CoDomainDim);
+  }
+  Eigen::Ref<const Eigen::Vector<double, CoDomainDim>>
+  operator[](const std::size_t i) const {
+    return this->crepr().segment(i * CoDomainDim, CoDomainDim);
+  }
+
+  std::size_t size() const { return NumPoints * Intervals; }
   /// ---------------------------------------------------------
   /// --------------- Evaluation of the polynomial ------------
   /// ---------------------------------------------------------
@@ -346,34 +372,32 @@ public:
   bool value_on_repr(const double &in,
                      Eigen::Vector<double, CoDomainDim> &out) const override {
 
-    for (std::size_t interval = 0; interval < Intervals; interval++) {
-      if (interval <= in <= interval + 1) {
-        for (std::size_t i = 0; i < CoDomainDim; i++) {
-          out(i) = GLPolynomial<NumPoints>::evaluation(
-              this->crerp().segment<NumPoints>(
-                  NumPoints * CoDomainDim * interval + i * NumPoints),
-              in);
-        }
-        return true;
-      }
+    std::size_t interval = this->domain_partition_.subinterval_index(in);
+    for (std::size_t i = 0; i < CoDomainDim; i++) {
+
+      Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
+          this->crepr().template segment<NumPoints * CoDomainDim>(
+              NumPoints * CoDomainDim * interval);
+
+      out(i) = GLPolynomial<NumPoints>::evaluation(
+          aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim)), in);
     }
-    return false;
+    return true;
   }
 
   virtual bool diff_from_repr(const double &_in,
                               Eigen::Ref<Eigen::MatrixXd> _mat) const override {
-    for (std::size_t interval = 0; interval < Intervals; interval++) {
-      if (interval <= _in <= interval + 1) {
-        for (std::size_t i = 0; i < CoDomainDim; i++) {
-          _mat(i, 0) = GLPolynomial<NumPoints>::evaluation_derivative(
-              this->crerp().segment<NumPoints>(
-                  NumPoints * CoDomainDim * interval + i * NumPoints),
-              _in);
-        }
-        return true;
-      }
+
+    std::size_t interval = this->domain_partition_.subinterval_index(_in);
+    for (std::size_t i = 0; i < CoDomainDim; i++) {
+      Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
+          this->crepr().template segment<NumPoints * CoDomainDim>(
+              NumPoints * CoDomainDim * interval);
+      _mat(i, 0) = GLPolynomial<NumPoints>::evaluation_derivative(
+                       aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim)), _in) *
+                   2.0 / domain_partition_.subinterval_length(interval);
     }
-    return false;
+    return true;
   }
 
   /// ---------------------------------------------------------
@@ -383,7 +407,7 @@ public:
 
   class Integral;
 
-  class Composition;
+  template <typename CoDomain> class Composition;
 
   /// ---------------------------------------------------------
   /// --------------- Default Elements ------------
@@ -399,6 +423,24 @@ public:
         Eigen::Map<Eigen::Matrix<double, NumPoints, 1>>(
             std::vector<double>(NumPoints, val).data()));
   }
+};
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
+class PWGLVPolynomialSpace {
+private:
+  Interval interval_;
+
+public:
+  PWGLVPolynomialSpace(const Interval &_interval) : interval_(_interval) {}
+  PWGLVPolynomialSpace(const std::pair<double, double> &_interval)
+      : interval_(_interval) {}
+
+  PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> polynomial() {
+    return PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>(interval_);
+  }
+  template <std::size_t Deg>
+  typename PWGLVPolynomial<NumPoints, Intervals,
+                           CoDomainDim>::template Derivative<Deg>
+  derivative();
 };
 
 } // namespace manifolds
