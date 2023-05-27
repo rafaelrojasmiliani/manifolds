@@ -1,18 +1,12 @@
 #pragma once
 #include <Eigen/Sparse>
+#include <Manifolds/Detail.hpp>
 #include <Manifolds/ManifoldBase.hpp>
 #include <functional>
 #include <memory>
 #include <variant>
 
 namespace manifolds {
-
-using DifferentialReprRefType =
-    std::variant<Eigen::Ref<Eigen::MatrixXd>,
-                 std::reference_wrapper<Eigen::SparseMatrix<double>>>;
-
-using DifferentialReprType =
-    std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double>>;
 
 class MapBaseComposition;
 /** Dynamic and type-agnostic function representation
@@ -29,9 +23,6 @@ private:
 
 public:
   // Default lifecycle
-  MapBase(const MapBase &) = default;
-  MapBase(MapBase &&) = default;
-  MapBase() = default;
   virtual ~MapBase() = default;
   // value returns
   std::unique_ptr<ManifoldBase>
@@ -59,59 +50,13 @@ public:
   virtual std::size_t get_codom_tangent_repr_dim() const = 0;
 
   virtual DifferentialReprType linearization_buffer() const = 0;
-  virtual bool is_differential_sparse() const = 0;
+  virtual MatrixTypeId differential_type() const = 0;
 
 protected:
   virtual MapBase *clone_impl() const = 0;
   virtual MapBase *move_clone_impl() = 0;
   virtual ManifoldBase *domain_buffer_impl() const = 0;
   virtual ManifoldBase *codomain_buffer_impl() const = 0;
-};
-
-template <typename Current, typename Base>
-class MapInheritanceHelper : public Base {
-public:
-  using Base::Base;
-  virtual ~MapInheritanceHelper() = default;
-
-  std::unique_ptr<Current> clone() const {
-    return std::unique_ptr<Current>(clone_impl());
-  }
-
-  std::unique_ptr<Current> move_clone() {
-    return std::unique_ptr<Current>(move_clone_impl());
-  }
-
-protected:
-  virtual Base *clone_impl() const override {
-
-    return new Current(*static_cast<const Current *>(this));
-  }
-
-  virtual Base *move_clone_impl() override {
-    return new Current(std::move(*static_cast<Current *>(this)));
-  }
-};
-
-template <typename Current, typename Base>
-class AbstractMapInheritanceHelper : public Base {
-public:
-  using Base::Base;
-  AbstractMapInheritanceHelper(const AbstractMapInheritanceHelper &) = default;
-  AbstractMapInheritanceHelper(AbstractMapInheritanceHelper &&) = default;
-  virtual ~AbstractMapInheritanceHelper() = default;
-
-  std::unique_ptr<Current> clone() const {
-    return std::unique_ptr<Current>(clone_impl());
-  }
-
-  std::unique_ptr<Current> move_clone() {
-    return std::unique_ptr<Current>(move_clone_impl());
-  }
-
-protected:
-  virtual Base *clone_impl() const = 0;
-  virtual Base *move_clone_impl() = 0;
 };
 
 } // namespace manifolds

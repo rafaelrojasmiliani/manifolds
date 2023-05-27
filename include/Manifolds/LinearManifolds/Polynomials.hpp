@@ -11,10 +11,9 @@ template <std::size_t Dim>
 class CanonicPolynomial
     : public ManifoldInheritanceHelper<CanonicPolynomial<Dim>,
                                        LinearManifold<Dim>>,
-      public MapInheritanceHelper<CanonicPolynomial<Dim>,
-                                  Map<Reals, Reals, false>> {
-  template <typename T, typename U, bool is> friend class Map;
-  template <typename T, typename U, bool is> friend class MapComposition;
+      public MapInheritanceHelper<CanonicPolynomial<Dim>, Map<Reals, Reals>> {
+  template <typename T, typename U> friend class Map;
+  template <typename T, typename U> friend class MapComposition;
 
   using base_t =
       ManifoldInheritanceHelper<CanonicPolynomial<Dim>, LinearManifold<Dim>>;
@@ -52,9 +51,9 @@ class PWCanonicPolynomial
     : public ManifoldInheritanceHelper<PWCanonicPolynomial<Dim, N>,
                                        LinearManifold<Dim * N>>,
       public MapInheritanceHelper<PWCanonicPolynomial<Dim, N>,
-                                  Map<Reals, Reals, false>> {
-  template <typename T, typename U, bool is> friend class Map;
-  template <typename T, typename U, bool is> friend class MapComposition;
+                                  Map<Reals, Reals>, MatrixTypeId::Dense> {
+  template <typename T, typename U> friend class Map;
+  template <typename T, typename U> friend class MapComposition;
 
   using base_t = ManifoldInheritanceHelper<PWCanonicPolynomial<Dim, N>,
                                            LinearManifold<Dim>>;

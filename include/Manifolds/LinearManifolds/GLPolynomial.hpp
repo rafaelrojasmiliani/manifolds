@@ -18,8 +18,8 @@ template <std::size_t NumPoints>
 class GLPolynomial
     : public LinearManifoldInheritanceHelper<GLPolynomial<NumPoints>,
                                              LinearManifold<NumPoints>>,
-      public MapInheritanceHelper<GLPolynomial<NumPoints>,
-                                  Map<CanonicInterval, Reals, false>> {
+      public MapInheritanceHelper<GLPolynomial<NumPoints>, Map<Reals, Reals>,
+                                  MatrixTypeId::Dense> {
 
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
@@ -187,9 +187,8 @@ template <std::size_t NumPoints, std::size_t CoDomainDim>
 class GLVPolynomial
     : public LinearManifoldInheritanceHelper<
           GLPolynomial<NumPoints>, LinearManifold<NumPoints * CoDomainDim>>,
-      public MapInheritanceHelper<
-          GLPolynomial<NumPoints>,
-          Map<CanonicInterval, LinearManifold<CoDomainDim>, false>> {
+      public MapInheritanceHelper<GLPolynomial<NumPoints>,
+                                  Map<Reals, LinearManifold<CoDomainDim>>> {
 
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
@@ -273,8 +272,7 @@ class PWGLVPolynomial
           LinearManifold<NumPoints * CoDomainDim * Intervals>>,
       public MapInheritanceHelper<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-          Map<ZeroToNInterval<Intervals + 1>, LinearManifold<CoDomainDim>,
-              false>> {
+          Map<Reals, LinearManifold<CoDomainDim>>> {
 
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;

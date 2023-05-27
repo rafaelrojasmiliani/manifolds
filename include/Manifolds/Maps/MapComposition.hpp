@@ -31,12 +31,11 @@ using DifferentialReprRef_t =
     typename DT<IsDiffSparse, DomainDim, CodomainDim>::RefType;
 
 } // namespace detail_composition
-template <typename DomainType, typename CoDomainType, bool IsDiffSparse>
-class Map;
+template <typename DomainType, typename CoDomainType> class Map;
 
 /// Typed composition of maps.
-template <typename DomainType, typename CoDomainType, bool IsDiffSparse>
-class MapComposition : public Map<DomainType, CoDomainType, IsDiffSparse>,
+template <typename DomainType, typename CoDomainType>
+class MapComposition : public Map<DomainType, CoDomainType>,
                        public MapBaseComposition {
   static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
   static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
@@ -45,10 +44,9 @@ protected:
 public:
   using Domain_t = DomainType;
   using Codomain_t = CoDomainType;
-  using Differential_t =
-      typename detail_composition::DT<IsDiffSparse,
-                                      Codomain_t::tangent_repr_dimension,
-                                      Domain_t::tangent_repr_dimension>::Type;
+
+  using map_t = Map<DomainType, CoDomainType>;
+
   std::size_t get_dom_dim() const override {
     return MapBaseComposition::get_dom_dim();
   }
@@ -64,10 +62,10 @@ public:
   }
 
   ManifoldBase *domain_buffer_impl() const override {
-    return Map<DomainType, CoDomainType, IsDiffSparse>::domain_buffer_impl();
+    return map_t::domain_buffer_impl();
   }
   ManifoldBase *codomain_buffer_impl() const override {
-    return Map<DomainType, CoDomainType, IsDiffSparse>::codomain_buffer_impl();
+    return map_t::codomain_buffer_impl();
   }
 
   // -------------------------------------------
@@ -75,20 +73,15 @@ public:
   // -------------------------------------------
 
   /// Constructor from a typed map
-  MapComposition(const Map<DomainType, CoDomainType, IsDiffSparse> &m)
-      : MapBaseComposition(m) {}
+  MapComposition(const map_t &m) : MapBaseComposition(m) {}
   /// Move-Constructor from a typed map
-  MapComposition(Map<DomainType, CoDomainType, IsDiffSparse> &&m)
-      : MapBaseComposition(std::move(m)) {}
+  MapComposition(map_t &&m) : MapBaseComposition(std::move(m)) {}
 
   /// Copy constructor from a typed map
-  MapComposition(
-      const MapComposition<DomainType, CoDomainType, IsDiffSparse> &m)
-      : MapBaseComposition(m) {}
+  MapComposition(const MapComposition &m) : MapBaseComposition(m) {}
 
   /// Move constructor from a typed map
-  MapComposition(MapComposition<DomainType, CoDomainType, IsDiffSparse> &&m)
-      : MapBaseComposition(std::move(m)) {}
+  MapComposition(MapComposition &&m) : MapBaseComposition(std::move(m)) {}
 
   /// Default destructor.
   virtual ~MapComposition() = default;
@@ -105,49 +98,34 @@ public:
   // -------------------------------------------
   // -------- Modifiers ------------------------
   // -------------------------------------------
-  template <typename OtherDomainType, bool OtherDiffIsSparse>
-  MapComposition<CoDomainType, OtherDomainType,
-                 IsDiffSparse && OtherDiffIsSparse>
-  compose(
-      const Map<DomainType, OtherDomainType, OtherDiffIsSparse> &_in) const & {
-    MapComposition<DomainType, CoDomainType, IsDiffSparse && OtherDiffIsSparse>
-        result(*this);
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(const Map<DomainType, OtherDomainType> &_in) const & {
+    MapComposition<DomainType, CoDomainType> result(*this);
     result.append(_in);
     return result;
   }
 
-  template <typename OtherDomainType, bool OtherDiffIsSparse>
-  MapComposition<CoDomainType, OtherDomainType,
-                 IsDiffSparse && OtherDiffIsSparse>
-  compose(MapComposition<DomainType, OtherDomainType, OtherDiffIsSparse> &&_in)
-      const & {
-    MapComposition<CoDomainType, OtherDomainType,
-                   IsDiffSparse && OtherDiffIsSparse>
-        result(*this);
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(MapComposition<DomainType, OtherDomainType> &&_in) const & {
+    MapComposition<CoDomainType, OtherDomainType> result(*this);
     result.append(std::move(_in));
     return result;
   }
 
-  template <typename OtherDomainType, bool OtherDiffIsSparse>
-  MapComposition<CoDomainType, OtherDomainType,
-                 IsDiffSparse && OtherDiffIsSparse>
-  compose(const MapComposition<DomainType, OtherDomainType, OtherDiffIsSparse>
-              &_in) && {
-    MapComposition<CoDomainType, OtherDomainType,
-                   IsDiffSparse && OtherDiffIsSparse>
-        result(std::move(*this));
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(const MapComposition<DomainType, OtherDomainType> &_in) && {
+    MapComposition<CoDomainType, OtherDomainType> result(std::move(*this));
     result.append(_in);
     return result;
   }
 
-  template <typename OtherDomainType, bool OtherDiffIsSparse>
-  MapComposition<CoDomainType, OtherDomainType,
-                 IsDiffSparse && OtherDiffIsSparse>
-  compose(
-      MapComposition<DomainType, OtherDomainType, OtherDiffIsSparse> &&_in) && {
-    MapComposition<CoDomainType, OtherDomainType,
-                   IsDiffSparse && OtherDiffIsSparse>
-        result(std::move(*this));
+  template <typename OtherDomainType>
+  MapComposition<CoDomainType, OtherDomainType>
+  compose(MapComposition<DomainType, OtherDomainType> &&_in) && {
+    MapComposition<CoDomainType, OtherDomainType> result(std::move(*this));
     result.append(std::move(_in));
     return result;
   }
@@ -156,14 +134,9 @@ public:
   // -------- Buffer of the differential -------
   // -------------------------------------------
   DifferentialReprType linearization_buffer() const override {
-    if constexpr (IsDiffSparse) {
-      return Differential_t(CoDomainType::tangent_repr_dimension,
-                            DomainType::tangent_repr_dimension);
-    } else {
-      return Differential_t();
-    }
+    return Differential_t(CoDomainType::tangent_repr_dimension,
+                          DomainType::tangent_repr_dimension);
   }
-  bool is_differential_sparse() const override { return IsDiffSparse; }
 
 protected:
   // -------------------------------------------
@@ -184,20 +157,18 @@ protected:
   virtual MapComposition *move_clone_impl() override {
     return new MapComposition(std::move(*(this)));
   }
-  virtual bool
-  value_on_repr(const typename DomainType::Representation &_in,
-                typename CoDomainType::Representation &_result) const override {
+  virtual bool value_on_repr(
+      const typename DomainType::RepresentationRef _in,
+      typename CoDomainType::RepresentationRef _result) const override {
     static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
     static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
     auto m1 = DomainType::Ref(_in);
     auto m2 = CoDomainType::Ref(_result);
     return value_impl(&m1, &m2);
   }
-  virtual bool
-  diff_from_repr(const typename DomainType::Representation &_in,
-                 detail_composition::DifferentialReprRef_t<IsDiffSparse> _mat)
-      const override {
-    DomainType m1(_in);
+  virtual bool diff_from_repr(const typename DomainType::RepresentationRef _in,
+                              DifferentialReprRefType _mat) const override {
+    typename DomainType::Ref m1(_in);
     return diff_impl(&m1, _mat);
   }
   MapComposition() = default;

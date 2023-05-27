@@ -11,14 +11,20 @@ template <typename Atlas, bool Faithfull = false>
 class Manifold : public ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>,
                                                   ManifoldBase>,
                  public Atlas {
-  template <typename T, typename U, bool IS> friend class Map;
-  template <typename T, typename U, bool IS> friend class MapComposition;
+  template <typename T, typename U> friend class Map;
+  template <typename T, typename U> friend class MapComposition;
 
   using base_t =
       ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>, ManifoldBase>;
 
 public:
   using Representation = std::decay_t<typename Atlas::Representation>;
+  using RepresentationRef = typename Atlas::RepresentationRef;
+  using RepresentationConstRef = typename Atlas::RepresentationConstRef;
+  using Atlas::cref_to_type;
+  using Atlas::ctype_to_ref;
+  using Atlas::ref_to_type;
+  using Atlas::type_to_ref;
 
 protected:
   Representation *representation_;
@@ -32,13 +38,18 @@ public:
   // ++++++++++++++++++++++++++   Live cycle    +++++++++++++++++++++++++++++++
   // Livecycle Constructor copy, move constructor, assigment and destructor
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  /// Default constructor. calls default constructor of its representation
   Manifold()
       : base_t(), representation_(new Representation()),
         const_representation_(representation_), onwing_(true) {}
+  /// Copy constructor. Copy construct the representation into the holding
+  /// pointer
   Manifold(const Manifold &that)
       : base_t(that),
         representation_(new Representation(*that.representation_)),
         const_representation_(representation_), onwing_(true) {}
+  /// Move constructor. Move construct the representation into the holding
+  /// pointer
   Manifold(Manifold &&that)
       : base_t(std::move(that)),
         representation_(new Representation(std::move(*that.representation_))),
@@ -73,7 +84,10 @@ public:
     return *this;
   }
 
-  // Assignment with representation for faithfull manifolds
+  // **REMARK**
+  // Assignemtns from representation are not necessray, because we can construct
+  // a temporal Manifold from Representation and use the move assign from a
+  // Manifold Assignment with representation for faithfull manifolds
   template <bool F = Faithfull>
   std::enable_if_t<F, Manifold<Atlas, Faithfull>> &
   operator=(const Representation &_other) {
@@ -88,7 +102,7 @@ public:
   std::enable_if_t<F, Manifold<Atlas, Faithfull>> &
   operator=(Representation &&_other) {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error("Trying to assign to a constnat manifol element");
     *representation_ = std::move(_other);
     return *this;
   }
@@ -155,6 +169,9 @@ public:
   constexpr const Representation &crepr() const {
     return *const_representation_;
   };
+  constexpr RepresentationConstRef crepr_ref() const {
+    return ctype_to_ref(*const_representation_);
+  };
 
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   // ++++++++++++++++++ Charts, Params and change of coordinates ++++++++++++++
@@ -208,6 +225,17 @@ protected:
     if (not representation_)
       throw std::logic_error("Trying to assign to a constnat manifold element");
     return std::move(*representation_);
+  };
+
+  constexpr RepresentationRef repr_ref() {
+    if (not representation_)
+      throw std::logic_error("Trying to assign to a constnat manifold element");
+    return type_to_ref(*representation_);
+  };
+  constexpr RepresentationRef mrepr_ref() {
+    if (not representation_)
+      throw std::logic_error("Trying to assign to a constnat manifold element");
+    return type_to_ref(std::move(*representation_));
   };
 };
 

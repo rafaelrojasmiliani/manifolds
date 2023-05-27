@@ -57,12 +57,12 @@ public:
   using Base::operator=;
 
 protected:
-  virtual ManifoldBase *clone_impl() const override {
+  virtual Base *clone_impl() const override {
 
     return new Current(*static_cast<const Current *>(this));
   }
 
-  virtual ManifoldBase *move_clone_impl() override {
+  virtual Base *move_clone_impl() override {
     return new Current(std::move(*static_cast<Current *>(this)));
   }
 };

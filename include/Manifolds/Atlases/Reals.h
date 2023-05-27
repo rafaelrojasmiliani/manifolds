@@ -5,6 +5,8 @@ class RealsAtlas {
 public:
   static const constexpr bool is_differential_sparse = false;
   using Representation = double;
+  using RepresentationRef = double &;
+  using RepresentationConstRef = const double &;
   using Coordinates = double;
   using ChartDifferential = Eigen::Matrix<double, 1, 1>;
 
@@ -13,6 +15,15 @@ public:
   using ParametrizationDifferential = Eigen::Matrix<double, 1, 1>;
 
   using Tangent = Eigen::Matrix<double, 1, 1>;
+
+  static const Representation &cref_to_type(RepresentationConstRef _ref) {
+    return _ref;
+  }
+  static Representation &ref_to_type(RepresentationRef &_ref) { return _ref; }
+  static RepresentationConstRef ctype_to_ref(const Representation &_ref) {
+    return _ref;
+  }
+  static RepresentationRef type_to_ref(Representation &_ref) { return _ref; }
 
   static void chart(const Representation &, const Representation &,
                     const Representation &element, Coordinates &result) {

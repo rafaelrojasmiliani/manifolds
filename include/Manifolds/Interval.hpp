@@ -2,103 +2,111 @@
 #include <Manifolds/LinearManifolds/LinearManifolds.hpp>
 #include <Manifolds/LinearManifolds/Reals.hpp>
 #include <Manifolds/ManifoldBase.hpp>
-#include <fpm/fixed.hpp>
 
 namespace manifolds {
 
-class CanonicInterval
-    : public ManifoldInheritanceHelper<CanonicInterval, Reals> {
+/* class CanonicInterval */
+/*     : public ManifoldInheritanceHelper<CanonicInterval, Reals> { */
+/* public: */
+/*   using base_t = ManifoldInheritanceHelper<CanonicInterval, Reals>; */
+
+/*   CanonicInterval(double in) : base_t() { */
+/*     if (not contains(in)) */
+/*       throw std::invalid_argument( */
+/*           "cannot be initialized by number ouside interval"); */
+/*     this->repr() = in; */
+/*   } */
+
+/*   CanonicInterval() = default; */
+/*   CanonicInterval(const CanonicInterval &that) = default; */
+/*   CanonicInterval(CanonicInterval &&that) = default; */
+
+/*   using base_t::operator=; */
+
+/*   const CanonicInterval &operator=(double in) { */
+/*     if (not contains(in)) */
+/*       throw std::invalid_argument( */
+/*           "cannot be initialized by number ouside interval"); */
+/*     this->repr() = in; */
+/*     return *this; */
+/*   } */
+
+/*   operator const double &() const { return this->crepr(); } */
+
+/*   bool contains(const Reals &other) { */
+/*     if (other <= -1.0 - 1.0e-9 or 1.0 + 1.0e-9 <= other) */
+/*       return false; */
+/*     return true; */
+/*   } */
+/* }; */
+
+/* template <std::size_t T> */
+/* class ZeroToNInterval */
+/*     : public ManifoldInheritanceHelper<CanonicInterval, Reals> { */
+/* public: */
+/*   using base_t = ManifoldInheritanceHelper<CanonicInterval, Reals>; */
+
+/*   ZeroToNInterval(double in) : base_t() { */
+/*     if (not contains(in)) */
+/*       throw std::invalid_argument( */
+/*           "cannot be initialized by number ouside interval"); */
+/*     this->repr() = in; */
+/*   } */
+
+/*   ZeroToNInterval() = default; */
+/*   ZeroToNInterval(const ZeroToNInterval &that) = default; */
+/*   ZeroToNInterval(ZeroToNInterval &&that) = default; */
+
+/*   using base_t::operator=; */
+
+/*   const ZeroToNInterval &operator=(double in) { */
+/*     if (not contains(in)) */
+/*       throw std::invalid_argument( */
+/*           "cannot be initialized by number ouside interval"); */
+/*     this->repr() = in; */
+/*     return *this; */
+/*   } */
+
+/*   operator const double &() const { return this->crepr(); } */
+
+/*   bool contains(const Reals &other) { */
+/*     if (other <= 0.0 - 1.0e-9 or T + 1.0e-9 <= other) */
+/*       return false; */
+/*     return true; */
+/*   } */
+/* }; */
+
+class Interval : public ManifoldInheritanceHelper<Interval, LinearManifold<2>> {
 public:
-  using base_t = ManifoldInheritanceHelper<CanonicInterval, Reals>;
-
-  CanonicInterval(double in) : base_t() {
-    if (not contains(in))
-      throw std::invalid_argument(
-          "cannot be initialized by number ouside interval");
-    this->repr() = in;
-  }
-
-  CanonicInterval() = default;
-  CanonicInterval(const CanonicInterval &that) = default;
-  CanonicInterval(CanonicInterval &&that) = default;
-
-  using base_t::operator=;
-
-  const CanonicInterval &operator=(double in) {
-    if (not contains(in))
-      throw std::invalid_argument(
-          "cannot be initialized by number ouside interval");
-    this->repr() = in;
-    return *this;
-  }
-
-  operator const double &() const { return this->crepr(); }
-
-  bool contains(const Reals &other) {
-    if (other <= -1.0 - 1.0e-9 or 1.0 + 1.0e-9 <= other)
-      return false;
-    return true;
-  }
-};
-
-template <std::size_t T>
-class ZeroToNInterval
-    : public ManifoldInheritanceHelper<CanonicInterval, Reals> {
-public:
-  using base_t = ManifoldInheritanceHelper<CanonicInterval, Reals>;
-
-  ZeroToNInterval(double in) : base_t() {
-    if (not contains(in))
-      throw std::invalid_argument(
-          "cannot be initialized by number ouside interval");
-    this->repr() = in;
-  }
-
-  ZeroToNInterval() = default;
-  ZeroToNInterval(const ZeroToNInterval &that) = default;
-  ZeroToNInterval(ZeroToNInterval &&that) = default;
-
-  using base_t::operator=;
-
-  const ZeroToNInterval &operator=(double in) {
-    if (not contains(in))
-      throw std::invalid_argument(
-          "cannot be initialized by number ouside interval");
-    this->repr() = in;
-    return *this;
-  }
-
-  operator const double &() const { return this->crepr(); }
-
-  bool contains(const Reals &other) {
-    if (other <= 0.0 - 1.0e-9 or T + 1.0e-9 <= other)
-      return false;
-    return true;
-  }
-};
-
-class Interval : public Manifold<LinearManifoldAtlas<2, 1>, false> {
-public:
-  using base_t = Manifold<LinearManifoldAtlas<2, 1>, false>;
+  using base_t = ManifoldInheritanceHelper<Interval, LinearManifold<2>>;
   using base_t::base_t;
-  Interval(const std::pair<double, double> _pair) : base_t() {
-    this->repr()(0) = _pair.first;
-    this->repr()(1) = _pair.second;
-  }
+  Interval(const std::pair<double, double> _pair)
+      : base_t(Eigen::Vector2d({_pair.first, _pair.second})) {}
 
   Interval &operator=(const std::pair<double, double> &_pair) {
-    this->repr()(0) = _pair.first;
-    this->repr()(1) = _pair.second;
+    this->repr() = Eigen::Vector2d({_pair.first, _pair.second});
     return *this;
   }
-  double length() const { return this->crepr()(1) - this->crepr()(0); }
+  double length() const {
+    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    return vec(1) - vec(0);
+  }
 
-  double first() const { return this->crepr()(0); }
-  double second() const { return this->crepr()(1); }
+  double first() const {
+
+    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    return vec(0);
+  }
+  double second() const {
+
+    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    return vec(1);
+  }
 
   bool contains(double val) const {
-    return this->crepr()(0) - std::numeric_limits<double>::epsilon() <= val and
-           val <= this->crepr()(1) + -std::numeric_limits<double>::epsilon();
+    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    return vec(0) - std::numeric_limits<double>::epsilon() <= val and
+           val <= vec(1) + -std::numeric_limits<double>::epsilon();
   }
 
   double get_random() const {
@@ -130,6 +138,7 @@ public:
 
   IntervalPartition &
   operator=(Eigen::Ref<const Eigen::Vector<double, NumberOfIntervals>> in) {
+
     this->repr() = in;
     return *this;
   }

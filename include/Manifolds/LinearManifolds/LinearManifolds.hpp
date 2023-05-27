@@ -1,103 +1,38 @@
 #pragma once
 #include <Manifolds/Atlases/LinearManifolds.h>
+#include <Manifolds/Detail.hpp>
 #include <Manifolds/Manifold.hpp>
+#include <iostream>
+#include <random>
 #include <type_traits>
 
 namespace manifolds {
 
-template <typename Current, typename Base>
+template <typename Current, typename Base,
+          MatrixTypeId DT = MatrixTypeId::Mixed>
 class LinearManifoldInheritanceHelper : public Base {
 private:
-  using ThisClass = LinearManifoldInheritanceHelper<Current, Base>;
+  using ThisClass = LinearManifoldInheritanceHelper<Current, Base, DT>;
 
 public:
   /// Representation type from its base
   using Representation = typename Base::Representation;
 
   /// Implement the constructor of its base class
-  using Base::Base;
-
-  /// Copy constructor
-  LinearManifoldInheritanceHelper(const ThisClass &_in) : Base(_in) {}
-
-  /// Move constructor
-  LinearManifoldInheritanceHelper(ThisClass &&_in) : Base(std::move(_in)) {}
-
-  /// Default constructor
-  virtual ~LinearManifoldInheritanceHelper() = default;
-
-  /// Clone
-  std::unique_ptr<Current> clone() const {
-    return std::unique_ptr<Current>(clone_impl());
-  }
-
-  /// Move clone
-  std::unique_ptr<Current> move_clone() {
-    return std::unique_ptr<Current>(move_clone_impl());
-  }
-
-  /// Implement assigment operator of the base
-  using Base::operator=;
-
-  /// Assigment operator
-  ThisClass &operator=(const ThisClass &that) {
-    Base::operator=(that);
-    return *this;
-  }
-
-  /// Assigment move operator
-  ThisClass &operator=(ThisClass &&that) {
-    Base::operator=(std::move(that));
-    return *this;
-  }
-
-  /// Sum operation
-  inline auto operator+(const Representation &that) const & {
-    return Base::crepr() + that;
-  }
-
-  /// Sum operation
-  inline auto operator+(const Representation &that) && {
-    return std::move(Base::mrepr()) + that;
-  }
-
-  inline auto operator+(Representation &&that) const & {
-    return Base::crepr() + std::move(that);
-  }
-
-  inline auto operator+(Representation &&that) && {
-    return std::move(Base::mrepr()) + std::move(that);
-  }
-
-  inline void operator+=(const Representation &that) { Base::repr() += that; }
-
-  inline void operator+=(Representation &&that) { Base::repr() += that; }
-
-  inline auto operator*(double that) const & { return Base::crepr() * that; }
-
-  inline auto operator*(double that) && {
-    return std::move(Base::mrepr()) * that;
-  }
-
-  inline void operator*=(double that) { Base::repr() *= that; }
 
   bool operator==(const Current &that) {
 
-    static typename Current::Representation diff_buffer;
     double _tol = 1.0e-12;
-    diff_buffer = this->crepr() - that.crepr();
     double err = 0;
     double lhs_max = 0;
     double rhs_max = 0;
-    if constexpr (std::is_same_v<typename Current::Representation, double>) {
-      err = std::fabs(diff_buffer);
-      lhs_max = std::fabs(this->crepr());
-      rhs_max = std::fabs(that.crepr());
-    } else {
-      err = diff_buffer.array().abs().maxCoeff();
-      lhs_max = (this->crepr()).array().abs().maxCoeff();
-      rhs_max = (that.crepr()).array().abs().maxCoeff();
-    }
+    std::visit(
+        [&err, &lhs_max, &rhs_max](const auto &lhs, const auto rhs) {
+          err = (lhs - rhs).array().abs().maxCoeff();
+          lhs_max = (lhs).array().abs().maxCoeff();
+          rhs_max = (rhs).array().abs().maxCoeff();
+        },
+        this->crepr(), that.crepr());
 
     if (lhs_max < _tol or rhs_max < _tol) {
       return err < _tol;
@@ -106,17 +41,15 @@ public:
     return err / lhs_max < _tol and err / rhs_max < _tol;
   }
 
+  auto operator+(const Representation &_in) & {
+    return std::visit([](auto &&_lhs, auto &&_rhs) { return _lhs + _rhs; },
+                      this->crepr(), _in);
+  }
   bool operator!=(const Current &that) { return not(*this == that); }
 
-protected:
-  virtual ManifoldBase *clone_impl() const override {
-
-    return new Current(*static_cast<const Current *>(this));
-  }
-
-  virtual ManifoldBase *move_clone_impl() override {
-    return new Current(std::move(*static_cast<Current *>(this)));
-  }
+  __INHERIT_LIVE_CYCLE(Base)
+  __DEFAULT_LIVE_CYCLE(LinearManifoldInheritanceHelper)
+  __DEFINE_CLONE_FUNCTIONS(Current, Base)
 };
 
 /// Left multiplication by scalar
@@ -139,62 +72,144 @@ template <long Rows, long Cols>
 using RealTuplesBase = Manifold<LinearManifoldAtlas<Rows, Cols>, true>;
 
 template <long Rows, long Cols>
-using SparseRealTuplesBase =
-    Manifold<SparseLinearManifoldAtlas<Rows, Cols>, true>;
-
-template <long Rows, long Cols>
 class MatrixManifold
     : public LinearManifoldInheritanceHelper<MatrixManifold<Rows, Cols>,
                                              RealTuplesBase<Rows, Cols>> {
 public:
+  static constexpr long rows = Rows;
+  static constexpr long cols = Cols;
+
+  /// Type definitonis
+
   using base_t = LinearManifoldInheritanceHelper<
       MatrixManifold<Rows, Cols>,
       Manifold<LinearManifoldAtlas<Rows, Cols>, true>>;
+
+  using typename base_t::Representation;
+
+  // Inheritance
   using base_t::base_t;
   using base_t::operator=;
-  const MatrixManifold &operator=(const MatrixManifold &that) {
-    base_t::operator=(that);
+
+  /// Live cycle
+  ///
+  __DEFAULT_LIVE_CYCLE(MatrixManifold)
+  /// specific casting operators
+
+  /// Getters
+  Eigen::Matrix<double, Rows, Cols> &eigen_dense() {
+    return std::get<Eigen::Matrix<double, Rows, Cols>>(this->repr());
+  }
+  const Eigen::Matrix<double, Rows, Cols> &ceigen_dense() const {
+    return std::get<Eigen::Matrix<double, Rows, Cols>>(this->crepr());
+  }
+
+  Eigen::SparseMatrix<double> &eigen_sparse() {
+    return std::get<Eigen::SparseMatrix<double>>(this->repr());
+  }
+  const Eigen::SparseMatrix<double> &ceigen_sparse() const {
+    return std::get<Eigen::SparseMatrix<double>>(this->crepr());
+  }
+
+  static DenseMatrix<Cols, Rows> get_dense_random() {
+    return DenseMatrix<Cols, Rows>::Random();
+  }
+  static SparseMatrix get_sparse_random() {
+    std::default_random_engine gen;
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+    int rows = Rows;
+    int cols = Cols;
+
+    std::vector<Eigen::Triplet<double>> tripletList;
+    for (int i = 0; i < rows; ++i)
+      for (int j = 0; j < cols; ++j) {
+        auto v_ij = dist(gen); // generate random number
+        if (v_ij < 0.1) {
+          tripletList.push_back(Eigen::Triplet<double>(
+              i, j, v_ij)); // if larger than treshold, insert it
+        }
+      }
+    SparseMatrix mat(rows, cols);
+    mat.setFromTriplets(tripletList.begin(), tripletList.end());
+    return mat;
+  }
+};
+
+template <long Rows, long Cols>
+class DenseMatrixManifold
+    : public LinearManifoldInheritanceHelper<DenseMatrixManifold<Rows, Cols>,
+                                             MatrixManifold<Rows, Cols>,
+                                             MatrixTypeId::Dense> {
+
+public:
+  using base_t =
+      LinearManifoldInheritanceHelper<DenseMatrixManifold<Rows, Cols>,
+                                      MatrixManifold<Rows, Cols>,
+                                      MatrixTypeId::Dense>;
+  using T = DenseMatrix<Rows, Cols>;
+  DenseMatrixManifold() : base_t(T()) {}
+  DenseMatrixManifold(DenseMatrixConstRef in) : base_t(in) {}
+  DenseMatrixManifold(SparseMatrixConstRef in) : base_t(in.get().toDense()) {}
+
+  DenseMatrixManifold(const DenseMatrixManifold &that) : base_t(that) {}
+  DenseMatrixManifold(DenseMatrixManifold &&that) : base_t(std::move(that)) {}
+
+  DenseMatrixManifold &operator=(DenseMatrixRef in) {
+    this->repr() = in;
     return *this;
   }
-  const MatrixManifold &operator=(MatrixManifold &&that) {
-    base_t::operator=(std::move(that));
+  DenseMatrixManifold &operator=(const DenseMatrixManifold &in) {
+    base_t::operator=(in);
     return *this;
   }
-  MatrixManifold(const MatrixManifold &_in) : base_t(_in) {}
-  MatrixManifold(MatrixManifold &&_in) : base_t(std::move(_in)) {}
-  virtual ~MatrixManifold() = default;
+  DenseMatrixManifold &operator=(const MatrixManifold<Rows, Cols> &in) {
+    base_t::operator=(std::get<T>(in.crepr()));
+    return *this;
+  }
+
+private:
+  using base_t::operator=;
 };
 
 template <long Rows, long Cols>
 class SparseMatrixManifold
-    : public LinearManifoldInheritanceHelper<SparseMatrixManifold<Rows, Cols>,
-                                             SparseRealTuplesBase<Rows, Cols>> {
+    : public LinearManifoldInheritanceHelper<DenseMatrixManifold<Rows, Cols>,
+                                             MatrixManifold<Rows, Cols>,
+                                             MatrixTypeId::Sparse> {
+
 public:
   using base_t =
-      LinearManifoldInheritanceHelper<SparseMatrixManifold<Rows, Cols>,
-                                      SparseRealTuplesBase<Rows, Cols>>;
-  using base_t::base_t;
+      LinearManifoldInheritanceHelper<DenseMatrixManifold<Rows, Cols>,
+                                      MatrixManifold<Rows, Cols>,
+                                      MatrixTypeId::Dense>;
+  using T = SparseMatrix;
+  SparseMatrixManifold() : base_t(T()) {}
+  SparseMatrixManifold(DenseMatrixConstRef in) : base_t(in) {}
+  SparseMatrixManifold(SparseMatrixConstRef in) : base_t(in.get().toDense()) {}
+
+  SparseMatrixManifold(const SparseMatrixManifold &that) : base_t(that) {}
+  SparseMatrixManifold(SparseMatrixManifold &&that) : base_t(std::move(that)) {}
+
+  SparseMatrixManifold &operator=(DenseMatrixRef in) { this->repr() = in; }
+  SparseMatrixManifold &operator=(const Eigen::SparseMatrix<double> &in) {
+    base_t::operator=(in);
+  }
+  SparseMatrixManifold &operator=(const SparseMatrixManifold &in) {
+    base_t::operator=(std::get<T>(in.crepr()));
+  }
+
+private:
   using base_t::operator=;
-  const SparseMatrixManifold &operator=(const SparseMatrixManifold &that) {
-    base_t::operator=(that);
-    return *this;
-  }
-  const SparseMatrixManifold &operator=(SparseMatrixManifold &&that) {
-    base_t::operator=(std::move(that));
-    return *this;
-  }
-  SparseMatrixManifold(const SparseMatrixManifold &_in) : base_t(_in) {}
-  SparseMatrixManifold(SparseMatrixManifold &&_in) : base_t(std::move(_in)) {}
-  virtual ~SparseMatrixManifold() = default;
 };
 
 template <long Rows> using LinearManifold = MatrixManifold<Rows, 1>;
-template <long Rows> using SparseLinearManifold = SparseMatrixManifold<Rows, 1>;
 
-using R2 = MatrixManifold<2, 1>;
-using R3 = MatrixManifold<3, 1>;
-using R4 = MatrixManifold<4, 1>;
-using R5 = MatrixManifold<5, 1>;
-using R6 = MatrixManifold<6, 1>;
-using R7 = MatrixManifold<7, 1>;
+using R2 = DenseMatrixManifold<2, 1>;
+using R3 = DenseMatrixManifold<3, 1>;
+using R4 = DenseMatrixManifold<4, 1>;
+using R5 = DenseMatrixManifold<5, 1>;
+using R6 = DenseMatrixManifold<6, 1>;
+using R7 = DenseMatrixManifold<7, 1>;
+
 } // namespace manifolds

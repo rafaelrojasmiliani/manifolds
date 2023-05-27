@@ -75,7 +75,7 @@ public:
   std::size_t get_codom_tangent_repr_dim() const override;
 
   DifferentialReprType linearization_buffer() const override {
-    if (is_differential_sparse()) {
+    if (differential_type()) {
       return Eigen::SparseMatrix<double>(get_codom_tangent_repr_dim(),
                                          get_dom_tangent_repr_dim());
     } else {
@@ -84,10 +84,16 @@ public:
                              get_dom_tangent_repr_dim());
     }
   }
-  bool is_differential_sparse() const override {
-    return std::all_of(maps_.begin(), maps_.end(), [](const auto &in) {
-      return in->is_differential_sparse();
-    });
+  MatrixTypeId differential_type() const override {
+    if (std::all_of(maps_.begin(), maps_.end(), [](const auto &in) {
+          return in->differential_type() == MatrixTypeId::Sparse;
+        }))
+      return MatrixTypeId::Sparse;
+    if (std::any_of(maps_.begin(), maps_.end(), [](const auto &in) {
+          return in->differential_type() == MatrixTypeId::Dense;
+        }))
+      return MatrixTypeId::Dense;
+    return MatrixTypeId::Mixed;
   }
 
 protected:
