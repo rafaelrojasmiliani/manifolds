@@ -2,6 +2,7 @@
 #include <Eigen/Core>
 #include <Manifolds/ManifoldBase.hpp>
 #include <exception>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -78,6 +79,7 @@ public:
     if (not representation_)
       throw std::logic_error("Trying to assign to a constnat manifold element");
     *representation_ = std::move(*_other.representation_);
+    delete _other.representation_;
     _other.representation_ = nullptr;
     _other.const_representation_ = nullptr;
     _other.onwing_ = false;

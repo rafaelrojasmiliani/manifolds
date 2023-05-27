@@ -9,15 +9,10 @@ struct DifferentialRepresentation {
   enum { dense = 0, sparse, mixed };
 };
 
-using DifferentialReprRefType =
-    std::variant<Eigen::Ref<Eigen::MatrixXd>,
-                 std::reference_wrapper<Eigen::SparseMatrix<double>>>;
-
-using DifferentialReprType =
-    std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double>>;
-
 template <long Rows, long Cols>
-using DenseMatrix = Eigen::Matrix<double, Rows, Cols>;
+using DenseMatrix =
+    Eigen::Matrix<double, (Rows * Cols < 20000) ? Rows : Eigen::Dynamic,
+                  (Rows * Cols < 20000) ? Cols : Eigen::Dynamic>;
 
 using DenseMatrixRef = Eigen::Ref<Eigen::MatrixXd>;
 
@@ -36,8 +31,15 @@ using MixedMatrix = std::variant<Eigen::Matrix<double, Rows, Cols>,
 
 using MixedMatrixRef = std::variant<DenseMatrixRef, SparseMatrixRef>;
 
-using MixedMatrixConstREf =
+using MixedMatrixConstRef =
     std::variant<DenseMatrixConstRef, SparseMatrixConstRef>;
+
+using DifferentialReprRefType =
+    std::variant<Eigen::Ref<Eigen::MatrixXd>,
+                 std::reference_wrapper<Eigen::SparseMatrix<double>>>;
+
+using DifferentialReprType =
+    std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double>>;
 
 enum MatrixTypeId { Dense = 0, Sparse, Mixed };
 

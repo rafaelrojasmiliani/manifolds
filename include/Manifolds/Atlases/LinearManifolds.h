@@ -39,8 +39,10 @@ void matrix_manifold_assing(LHS &&_lhs, RHS &&_rhs) {
 }
 
 template <long Rows, long Cols> class LinearManifoldAtlas {
-  static constexpr long EffectiveCols = (Rows * Cols < 20000) ? Cols : 0;
-  static constexpr long EffectiveRows = (Rows * Cols < 20000) ? Rows : 0;
+  static constexpr long EffectiveCols =
+      (Rows * Cols < 20000) ? Cols : Eigen::Dynamic;
+  static constexpr long EffectiveRows =
+      (Rows * Cols < 20000) ? Rows : Eigen::Dynamic;
 
 private:
   using DenseMatrix = Eigen::Matrix<double, EffectiveRows, EffectiveCols>;

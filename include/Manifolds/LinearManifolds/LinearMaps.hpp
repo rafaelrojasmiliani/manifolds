@@ -7,8 +7,13 @@ namespace manifolds {
 
 template <typename Current, typename Base,
           MatrixTypeId DT = MatrixTypeId::Mixed>
-class LinearMapInheritanceHelper : public Base {
+class LinearMapInheritanceHelper : public Base {};
 
+template <typename Current, typename Base>
+class LinearMapInheritanceHelper<Current, Base, MatrixTypeId::Mixed>
+    : public Base {
+
+public:
   __INHERIT_LIVE_CYCLE(Base)
   __DEFAULT_LIVE_CYCLE(LinearMapInheritanceHelper)
   __DEFINE_CLONE_FUNCTIONS(Current, Base)
@@ -61,11 +66,6 @@ public:
   virtual MatrixTypeId differential_type() const override {
     return MatrixTypeId::Dense;
   }
-
-  virtual DifferentialReprType linearization_buffer() const override {
-    return Eigen::Matrix<double, Current::domain::tangent_repr_dimension,
-                         Current::codomain::tangent_repr_dimension>();
-  }
 };
 
 template <typename Domain, typename Codomain>
@@ -73,8 +73,7 @@ class LinearMap : public LinearManifoldInheritanceHelper<
                       LinearMap<Domain, Codomain>,
                       MatrixManifold<Codomain::dimension, Domain::dimension>>,
                   public LinearMapInheritanceHelper<LinearMap<Domain, Codomain>,
-                                                    Map<Domain, Codomain>,
-                                                    MatrixTypeId::Mixed> {
+                                                    Map<Domain, Codomain>> {
 
   // ------------------------
   // --- Static assertions --
@@ -86,11 +85,10 @@ class LinearMap : public LinearManifoldInheritanceHelper<
       std::is_base_of_v<LinearManifold<Codomain::dimension>, Codomain>,
       "Linear map must act between vector spaces");
 
-  using DenseMatrixType =
-      Eigen::Matrix<double, Codomain::tangent_repr_dimension,
-                    Domain::tangent_repr_dimension>;
-  using DenseMatrixTypeRef = Eigen::Ref<Eigen::MatrixXd>;
-  using DenseMatrixTypeConstRef = Eigen::Ref<const Eigen::MatrixXd>;
+  using DenseMatrixType = DenseMatrix<Codomain::tangent_repr_dimension,
+                                      Domain::tangent_repr_dimension>;
+  using DenseMatrixTypeRef = DenseMatrixRef;
+  using DenseMatrixTypeConstRef = DenseMatrixConstRef;
   using SparseMatrixType = Eigen::SparseMatrix<double>;
 
 public:
@@ -139,6 +137,58 @@ public:
     SparseMatrixType result;
     return result;
   }
+};
+
+template <typename Domain, typename Codomain>
+class DenseLinearMap
+    : public LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
+                                        Map<Domain, Codomain>,
+                                        MatrixTypeId::Dense> {
+  using base_t =
+      LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
+                                 Map<Domain, Codomain>, MatrixTypeId::Dense>;
+
+public:
+  using T = DenseMatrix<Codomain::dimension, Domain::dimension>;
+  DenseLinearMap() : base_t(T()) {}
+  DenseLinearMap(DenseMatrixConstRef in) : base_t(in) {}
+  DenseLinearMap(SparseMatrixConstRef in) : base_t(in.get().toDense()) {}
+
+  DenseLinearMap(const DenseLinearMap &that) : base_t(that) {}
+  DenseLinearMap(DenseLinearMap &&that) : base_t(std::move(that)) {}
+
+  DenseLinearMap &operator=(DenseMatrixRef in) {
+    this->repr() = in;
+    return *this;
+  }
+  DenseLinearMap &operator=(const DenseLinearMap &in) {
+    base_t::operator=(in);
+    return *this;
+  }
+  DenseLinearMap &
+  operator=(const MatrixManifold<Codomain::dimension, Domain::dimension> &in) {
+    base_t::operator=(std::get<T>(in.crepr()));
+    return *this;
+  }
+
+  virtual DifferentialReprType linearization_buffer() const override {
+    if constexpr (DenseMatrixRef::RowsAtCompileTime == Eigen::Dynamic) {
+      // Is the matrix is so large, return an error if this has a dense matrix
+      if (std::holds_alternative<DenseMatrix>(this->crepr())) {
+        throw std::logic_error("Matrix is too large to be dense");
+        return Eigen::MatrixXd();
+      }
+      return Eigen::SparseMatrix<double>();
+    } else {
+      if (std::holds_alternative<DenseMatrix>(this->crepr())) {
+        return Eigen::MatrixXd();
+      }
+      return Eigen::SparseMatrix<double>();
+    }
+  }
+
+private:
+  using base_t::operator=;
 };
 
 using End3 = LinearMap<R3, R3>;

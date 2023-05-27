@@ -130,10 +130,7 @@ public:
   // ---------------------------------
   // Defintion of bool operator(in, out)
   // ---------------------------------
-  template <bool F = (not CoDomainType::is_faithfull and
-                      not DomainType::is_faithfull)>
-  std::enable_if_t<F, bool> operator()(const DomainType &_in,
-                                       CoDomainType &_out) const {
+  bool operator()(const DomainType &_in, CoDomainType &_out) const {
     value(_in, _out);
     return true;
   }

@@ -111,8 +111,8 @@ public:
     return std::get<Eigen::SparseMatrix<double>>(this->crepr());
   }
 
-  static DenseMatrix<Cols, Rows> get_dense_random() {
-    return DenseMatrix<Cols, Rows>::Random();
+  static DenseMatrix<Rows, Cols> get_dense_random() {
+    return DenseMatrix<Rows, Cols>::Random();
   }
   static SparseMatrix get_sparse_random() {
     std::default_random_engine gen;
@@ -191,12 +191,17 @@ public:
   SparseMatrixManifold(const SparseMatrixManifold &that) : base_t(that) {}
   SparseMatrixManifold(SparseMatrixManifold &&that) : base_t(std::move(that)) {}
 
-  SparseMatrixManifold &operator=(DenseMatrixRef in) { this->repr() = in; }
+  SparseMatrixManifold &operator=(SparseMatrixRef in) {
+    this->repr() = in;
+    return *this;
+  }
   SparseMatrixManifold &operator=(const Eigen::SparseMatrix<double> &in) {
     base_t::operator=(in);
+    return *this;
   }
   SparseMatrixManifold &operator=(const SparseMatrixManifold &in) {
     base_t::operator=(std::get<T>(in.crepr()));
+    return *this;
   }
 
 private:
