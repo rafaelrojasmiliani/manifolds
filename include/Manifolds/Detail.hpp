@@ -48,24 +48,24 @@ public:                                                                        \
   using B::B;                                                                  \
   using B::operator=;
 
-#define __DEFINE_CLONE_FUNCTIONS(C, B)                                         \
+#define __DEFINE_CLONE_FUNCTIONS(THISCLASS, C, B)                              \
 public:                                                                        \
   std::unique_ptr<C> clone() const {                                           \
-    return std::unique_ptr<C>(clone_impl());                                   \
+    return std::unique_ptr<C *>(clone_impl());                                 \
   }                                                                            \
   std::unique_ptr<C> move_clone() {                                            \
-    return std::unique_ptr<C>(move_clone_impl());                              \
+    return std::unique_ptr<C *>(move_clone_impl());                            \
   }                                                                            \
                                                                                \
 protected:                                                                     \
-  virtual B *clone_impl() const override {                                     \
-                                                                               \
+  virtual THISCLASS *clone_impl() const override {                             \
     return new C(*static_cast<const C *>(this));                               \
   }                                                                            \
                                                                                \
-  virtual B *move_clone_impl() override {                                      \
+  virtual THISCLASS *move_clone_impl() override {                              \
     return new C(std::move(*static_cast<C *>(this)));                          \
   }
+
 #define __DEFAULT_LIVE_CYCLE(C)                                                \
 public:                                                                        \
   C() = default;                                                               \

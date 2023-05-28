@@ -46,23 +46,23 @@ public:
   virtual ~ManifoldInheritanceHelper() = default;
 
   std::unique_ptr<Current> clone() const {
-    return std::unique_ptr<Current>(clone_impl());
+    return std::unique_ptr<Current>(static_cast<Current *>(clone_impl()));
   }
 
   std::unique_ptr<Current> move_clone() {
-    return std::unique_ptr<Current>(move_clone_impl());
+    return std::unique_ptr<Current>(static_cast<Current *>(move_clone_impl()));
   }
 
   // virtual bool is_faithfull() const = 0;
   using Base::operator=;
 
 protected:
-  virtual Base *clone_impl() const override {
+  virtual ThisClass *clone_impl() const override {
 
     return new Current(*static_cast<const Current *>(this));
   }
 
-  virtual Base *move_clone_impl() override {
+  virtual ThisClass *move_clone_impl() override {
     return new Current(std::move(*static_cast<Current *>(this)));
   }
 };

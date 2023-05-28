@@ -45,11 +45,12 @@ public:
     return std::visit([](auto &&_lhs, auto &&_rhs) { return _lhs + _rhs; },
                       this->crepr(), _in);
   }
+
   bool operator!=(const Current &that) { return not(*this == that); }
 
   __INHERIT_LIVE_CYCLE(Base)
   __DEFAULT_LIVE_CYCLE(LinearManifoldInheritanceHelper)
-  __DEFINE_CLONE_FUNCTIONS(Current, Base)
+  __DEFINE_CLONE_FUNCTIONS(LinearManifoldInheritanceHelper, Current, Base)
 };
 
 /// Left multiplication by scalar
@@ -94,6 +95,16 @@ public:
   /// Live cycle
   ///
   __DEFAULT_LIVE_CYCLE(MatrixManifold)
+
+  MatrixManifold &operator=(const Eigen::Matrix<double, Rows, Cols> &in) {
+    this->repr() = in;
+    return *this;
+  }
+
+  MatrixManifold &operator=(const Eigen::SparseMatrix<double> &in) {
+    this->repr() = in;
+    return *this;
+  }
   /// specific casting operators
 
   /// Getters
@@ -155,7 +166,7 @@ public:
   DenseMatrixManifold(const DenseMatrixManifold &that) : base_t(that) {}
   DenseMatrixManifold(DenseMatrixManifold &&that) : base_t(std::move(that)) {}
 
-  DenseMatrixManifold &operator=(DenseMatrixRef in) {
+  DenseMatrixManifold &operator=(const T &in) {
     this->repr() = in;
     return *this;
   }
@@ -174,13 +185,13 @@ private:
 
 template <long Rows, long Cols>
 class SparseMatrixManifold
-    : public LinearManifoldInheritanceHelper<DenseMatrixManifold<Rows, Cols>,
+    : public LinearManifoldInheritanceHelper<SparseMatrixManifold<Rows, Cols>,
                                              MatrixManifold<Rows, Cols>,
                                              MatrixTypeId::Sparse> {
 
 public:
   using base_t =
-      LinearManifoldInheritanceHelper<DenseMatrixManifold<Rows, Cols>,
+      LinearManifoldInheritanceHelper<SparseMatrixManifold<Rows, Cols>,
                                       MatrixManifold<Rows, Cols>,
                                       MatrixTypeId::Dense>;
   using T = SparseMatrix;
@@ -209,6 +220,8 @@ private:
 };
 
 template <long Rows> using LinearManifold = MatrixManifold<Rows, 1>;
+template <long Rows> using DenseLinearManifold = DenseMatrixManifold<Rows, 1>;
+template <long Rows> using SparseLinearManifold = SparseMatrixManifold<Rows, 1>;
 
 using R2 = DenseMatrixManifold<2, 1>;
 using R3 = DenseMatrixManifold<3, 1>;

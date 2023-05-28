@@ -40,6 +40,8 @@ class MapComposition : public Map<DomainType, CoDomainType>,
   static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
   static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
 
+  template <typename A, typename B> friend class MapComposition;
+
 protected:
 public:
   using Domain_t = DomainType;
@@ -99,17 +101,17 @@ public:
   // -------- Modifiers ------------------------
   // -------------------------------------------
   template <typename OtherDomainType>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(const Map<DomainType, OtherDomainType> &_in) const & {
-    MapComposition<DomainType, CoDomainType> result(*this);
+  MapComposition<OtherDomainType, CoDomainType>
+  compose(const Map<OtherDomainType, DomainType> &_in) const & {
+    MapBaseComposition result(_in.clone());
     result.append(_in);
     return result;
   }
 
   template <typename OtherDomainType>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(MapComposition<DomainType, OtherDomainType> &&_in) const & {
-    MapComposition<CoDomainType, OtherDomainType> result(*this);
+  MapComposition<OtherDomainType, CoDomainType>
+  compose(MapComposition<OtherDomainType, DomainType> &&_in) const & {
+    MapComposition<OtherDomainType, CoDomainType> result(*this);
     result.append(std::move(_in));
     return result;
   }
@@ -128,14 +130,6 @@ public:
     MapComposition<CoDomainType, OtherDomainType> result(std::move(*this));
     result.append(std::move(_in));
     return result;
-  }
-
-  // -------------------------------------------
-  // -------- Buffer of the differential -------
-  // -------------------------------------------
-  DifferentialReprType linearization_buffer() const override {
-    return Differential_t(CoDomainType::tangent_repr_dimension,
-                          DomainType::tangent_repr_dimension);
   }
 
 protected:
@@ -157,20 +151,25 @@ protected:
   virtual MapComposition *move_clone_impl() override {
     return new MapComposition(std::move(*(this)));
   }
-  virtual bool value_on_repr(
-      const typename DomainType::RepresentationRef _in,
-      typename CoDomainType::RepresentationRef _result) const override {
+  virtual bool
+  value_on_repr(const typename DomainType::Representation &_in,
+                typename CoDomainType::Representation &_result) const override {
     static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
     static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
     auto m1 = DomainType::Ref(_in);
     auto m2 = CoDomainType::Ref(_result);
     return value_impl(&m1, &m2);
   }
-  virtual bool diff_from_repr(const typename DomainType::RepresentationRef _in,
+  virtual bool diff_from_repr(const typename DomainType::Representation &_in,
                               DifferentialReprRefType _mat) const override {
-    typename DomainType::Ref m1(_in);
+    auto m1 = DomainType::Ref(_in);
     return diff_impl(&m1, _mat);
   }
   MapComposition() = default;
+
+private:
+  MapComposition(const MapBaseComposition &in) : MapBaseComposition(in) {}
+
+  MapComposition(MapBaseComposition &&in) : MapBaseComposition(std::move(in)) {}
 };
 } // namespace manifolds

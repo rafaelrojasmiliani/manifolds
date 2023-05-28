@@ -60,7 +60,12 @@ public:
   using RepresentationConstRef =
       const std::variant<DenseMatrixConstRef, SparseMatrixConstRef>;
 
-  static DenseMatrixConstRef cref_to_type(const RepresentationRef _ref) {
+  static DenseMatrixConstRef cref_to_type(RepresentationConstRef &_ref) {
+    if (std::holds_alternative<DenseMatrixRef>(_ref))
+      return std::get<0>(_ref);
+    return std::get<1>(_ref);
+  }
+  static const Representation *cref_to_type_ptr(RepresentationConstRef &_ref) {
     if (std::holds_alternative<DenseMatrixRef>(_ref))
       return std::get<0>(_ref);
     return std::get<1>(_ref);

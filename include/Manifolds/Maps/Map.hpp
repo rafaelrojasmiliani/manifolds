@@ -38,6 +38,11 @@ using DifferentialReprRef_t =
     typename DT<IsDiffSparse, DomainDim, CodomainDim>::RefType;
 
 } // namespace detail
+  //
+  //
+  //
+
+/// Map typed class.
 template <typename DomainType, typename CoDomainType>
 class Map : virtual public MapBase {
   static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>,
@@ -59,11 +64,11 @@ public:
 
   // Clone
   std::unique_ptr<Map> clone() const {
-    return std::unique_ptr<Map>(clone_impl());
+    return std::unique_ptr<Map>(static_cast<Map *>(this->clone_impl()));
   }
 
   std::unique_ptr<Map> move_clone() {
-    return std::unique_ptr<Map>(move_clone_impl());
+    return std::unique_ptr<Map>(static_cast<Map *>(this->move_clone_impl()));
   }
 
   // Defintioon of out value(in)
@@ -78,7 +83,7 @@ public:
   template <bool F = (DomainType::is_faithfull and
                       not CoDomainType::is_faithfull)>
   std::enable_if_t<F, CoDomainType>
-  value(const typename DomainType::RepresentationRef _in) const {
+  value(const typename DomainType::Representation &_in) const {
     CoDomainType result;
     value(_in, result);
     return result;
@@ -86,7 +91,7 @@ public:
 
   template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
   std::enable_if_t<F, typename CoDomainType::Representation>
-  value(const typename DomainType::RepresentationRef _in) const {
+  value(const typename DomainType::Representation &_in) const {
     typename CoDomainType::Representation result;
     value(_in, result);
     return result;
@@ -103,27 +108,27 @@ public:
   // Defintion of bool value(in, out)
   // ---------------------------------
   bool value(const DomainType &_in, CoDomainType &_out) const {
-    return value_on_repr(_in.crepr_ref(), _out.repr_ref());
+    return value_on_repr(_in.crepr(), _out.repr());
   }
   template <bool F = (DomainType::is_faithfull and
                       not CoDomainType::is_faithfull)>
   std::enable_if_t<F, bool>
-  value(const typename DomainType::RepresentationRef _in,
+  value(const typename DomainType::Representation &_in,
         CoDomainType &_out) const {
     return value_on_repr(_in, _out.repr());
   }
 
   template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
   std::enable_if_t<F, bool>
-  value(const typename DomainType::RepresentationRef _in,
-        typename CoDomainType::RepresentationRef _out) const {
+  value(const typename DomainType::Representation &_in,
+        typename CoDomainType::Representation &_out) const {
     return value_on_repr(_in, _out);
   }
   template <bool F = (not DomainType::is_faithfull and
                       CoDomainType::is_faithfull)>
   std::enable_if_t<F, bool>
   value(const DomainType &_in,
-        typename CoDomainType::RepresentationRef _out) const {
+        typename CoDomainType::Representation &_out) const {
     return value_on_repr(_in.crepr(), _out);
   }
 
@@ -138,15 +143,15 @@ public:
   template <bool F = (DomainType::is_faithfull and
                       not CoDomainType::is_faithfull)>
   std::enable_if_t<F, bool>
-  operator()(typename DomainType::RepresentationConstRef _in,
+  operator()(const typename DomainType::Representation &_in,
              CoDomainType &_out) const {
     value(_in, _out);
     return true;
   }
   template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
   std::enable_if_t<F, bool>
-  operator()(typename DomainType::RepresentationConstRef _in,
-             typename CoDomainType::RepresentationRef _out) const {
+  operator()(const typename DomainType::Representation &_in,
+             typename CoDomainType::Representation &_out) const {
     return value(_in, _out);
   }
 
@@ -154,7 +159,7 @@ public:
                       CoDomainType::is_faithfull)>
   std::enable_if_t<F, bool>
   operator()(const DomainType &_in,
-             typename CoDomainType::RepresentationRef _out) const {
+             typename CoDomainType::Representation &_out) const {
     return value(_in, _out);
   }
 
@@ -169,16 +174,16 @@ public:
   template <bool F = (DomainType::is_faithfull and
                       not CoDomainType::is_faithfull)>
   std::enable_if_t<F, CoDomainType>
-  operator()(const typename DomainType::RepresentationRef _in) const {
+  operator()(const typename DomainType::Representation &_in) const {
     CoDomainType result;
     value(_in, result);
     return result;
   }
   template <bool F = (DomainType::is_faithfull and CoDomainType::is_faithfull)>
   std::enable_if_t<F, typename CoDomainType::Representation>
-  operator()(const typename DomainType::RepresentationRef _in) const {
+  operator()(const typename DomainType::Representation &_in) const {
     CoDomainType result;
-    value(_in, result.repr_ref());
+    value(_in, result.repr());
     return result.repr();
   }
 
@@ -205,9 +210,8 @@ public:
   }
 
   template <bool F = DomainType::is_faithfull>
-  std::enable_if_t<F, bool>
-  diff(const typename DomainType::RepresentationRef _in,
-       DifferentialReprRefType _out) const {
+  std::enable_if_t<F, bool> diff(const typename DomainType::Representation &_in,
+                                 DifferentialReprRefType _out) const {
     return diff_from_repr(_in, _out);
   }
 
@@ -255,16 +259,15 @@ protected:
   bool value_impl(const ManifoldBase *_in,
                   ManifoldBase *_other) const override {
 
-    return value_on_repr(static_cast<const DomainType *>(_in)->crepr_ref(),
-                         static_cast<CoDomainType *>(_other)->repr_ref());
+    return value_on_repr(static_cast<const DomainType *>(_in)->crepr(),
+                         static_cast<CoDomainType *>(_other)->repr());
   }
 
   /// Implementation of differentiation of for MapBase. This is a
   /// representaiton-agnostic evaluation.
   bool diff_impl(const ManifoldBase *_in,
                  DifferentialReprRefType _mat) const override {
-    return diff_from_repr(static_cast<const DomainType *>(_in)->crepr_ref(),
-                          _mat);
+    return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
   }
 
   /// Get a pointer with an instance of the domain. Override if you have a
@@ -283,13 +286,16 @@ protected:
   /// Function to copmute the result of the map using just the representation
   /// types
   virtual bool
-  value_on_repr(typename DomainType::RepresentationConstRef _in,
-                typename CoDomainType::RepresentationRef _result) const = 0;
+  value_on_repr(const typename DomainType::Representation &_in,
+                typename CoDomainType::Representation &_result) const = 0;
 
   /// Function to copmute the result of the map differential using just the
   /// representation types
-  virtual bool diff_from_repr(typename DomainType::RepresentationConstRef _in,
+  virtual bool diff_from_repr(const typename DomainType::Representation &_in,
                               DifferentialReprRefType _mat) const = 0;
+
+  virtual Map *clone_impl() const override = 0;
+  virtual Map *move_clone_impl() override = 0;
 };
 
 // ------------------------------
@@ -308,18 +314,18 @@ template <typename Current, typename Base>
 class MapInheritanceHelper<Current, Base, MatrixTypeId::Dense> : public Base {
   __INHERIT_LIVE_CYCLE(Base)
   __DEFAULT_LIVE_CYCLE(MapInheritanceHelper)
-  __DEFINE_CLONE_FUNCTIONS(Current, Base)
+  __DEFINE_CLONE_FUNCTIONS(MapInheritanceHelper, Current, Base)
 
 private:
   virtual bool
-  diff_from_repr(const typename Current::DomainType::RepresentationRef _in,
+  diff_from_repr(const typename Current::DomainType::Representation &_in,
                  DifferentialReprRefType _mat) const override {
     return diff_from_repr(_in, std::get<1>(_mat));
   }
 
 public:
   virtual bool
-  diff_from_repr(const typename Current::DomainType::RepresentationRef _in,
+  diff_from_repr(const typename Current::DomainType::Representation &_in,
                  Eigen::Ref<Eigen::MatrixXd> _mat) const = 0;
 
   virtual MatrixTypeId differential_type() const override {
@@ -337,18 +343,18 @@ template <typename Current, typename Base>
 class MapInheritanceHelper<Current, Base, MatrixTypeId::Sparse> : public Base {
   __INHERIT_LIVE_CYCLE(Base)
   __DEFAULT_LIVE_CYCLE(MapInheritanceHelper)
-  __DEFINE_CLONE_FUNCTIONS(Current, Base)
+  __DEFINE_CLONE_FUNCTIONS(MapInheritanceHelper, Current, Base)
 
 private:
   virtual bool
-  diff_from_repr(const typename Current::DomainType::RepresentationRef _in,
+  diff_from_repr(const typename Current::DomainType::Representation &_in,
                  DifferentialReprRefType _mat) const override {
     return diff_from_repr(_in, std::get<0>(_mat));
   }
 
 public:
   virtual bool diff_from_repr(
-      const typename Current::DomainType::RepresentationRef _in,
+      const typename Current::DomainType::Representation &_in,
       std::reference_wrapper<Eigen::SparseMatrix<double>> _mat) const = 0;
 
   virtual MatrixTypeId differential_type() const override {
@@ -368,7 +374,7 @@ template <typename Current, typename Base>
 class MapInheritanceHelper<Current, Base, MatrixTypeId::Mixed> : public Base {
   __INHERIT_LIVE_CYCLE(Base)
   __DEFAULT_LIVE_CYCLE(MapInheritanceHelper)
-  __DEFINE_CLONE_FUNCTIONS(Current, Base)
+  __DEFINE_CLONE_FUNCTIONS(MapInheritanceHelper, Current, Base)
 
 public:
   virtual MatrixTypeId differential_type() const override {
@@ -387,13 +393,13 @@ public:
   Identity(Identity &&_that) = default;
 
 protected:
-  bool value_on_repr(const typename Set::RepresentationRef _in,
-                     typename Set::RepresentationRef _result) const override {
+  bool value_on_repr(const typename Set::Representation &_in,
+                     typename Set::Representation &_result) const override {
 
     _result = _in;
     return true;
   }
-  bool diff_from_repr(const typename Set::RepresentationRef,
+  bool diff_from_repr(const typename Set::Representation &,
                       Eigen::Ref<Eigen::MatrixXd>) const override {
     return true;
   }

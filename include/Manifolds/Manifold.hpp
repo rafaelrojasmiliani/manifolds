@@ -117,12 +117,12 @@ public:
   // Get a manifold representation of a piece of data
   static constexpr Manifold Ref(Representation *in) { return Manifold(in); }
   // Get a manifold representation of a piece of data
-  static constexpr Manifold Ref(Representation &in) { return Manifold(&in); }
-  // Get a manifold representation of a piece of data
   static constexpr Manifold Ref(const Representation *in) {
     return Manifold(in);
   }
   // Get a manifold representation of a piece of data
+  static constexpr Manifold Ref(Representation &in) { return Manifold(&in); }
+
   static constexpr Manifold Ref(const Representation &in) {
     return Manifold(&in);
   }
@@ -170,9 +170,6 @@ public:
   /// Get const referece to the representtion
   constexpr const Representation &crepr() const {
     return *const_representation_;
-  };
-  constexpr RepresentationConstRef crepr_ref() const {
-    return ctype_to_ref(*const_representation_);
   };
 
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -227,17 +224,6 @@ protected:
     if (not representation_)
       throw std::logic_error("Trying to assign to a constnat manifold element");
     return std::move(*representation_);
-  };
-
-  constexpr RepresentationRef repr_ref() {
-    if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
-    return type_to_ref(*representation_);
-  };
-  constexpr RepresentationRef mrepr_ref() {
-    if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
-    return type_to_ref(std::move(*representation_));
   };
 };
 

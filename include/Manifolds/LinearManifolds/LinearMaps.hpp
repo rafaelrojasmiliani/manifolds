@@ -7,19 +7,15 @@ namespace manifolds {
 
 template <typename Current, typename Base,
           MatrixTypeId DT = MatrixTypeId::Mixed>
-class LinearMapInheritanceHelper : public Base {};
-
-template <typename Current, typename Base>
-class LinearMapInheritanceHelper<Current, Base, MatrixTypeId::Mixed>
-    : public Base {
+class LinearMapInheritanceHelper : public Base {
 
 public:
   __INHERIT_LIVE_CYCLE(Base)
   __DEFAULT_LIVE_CYCLE(LinearMapInheritanceHelper)
-  __DEFINE_CLONE_FUNCTIONS(Current, Base)
+  __DEFINE_CLONE_FUNCTIONS(LinearMapInheritanceHelper, Current, Base)
 
 private:
-  virtual bool diff_from_repr(typename Base::domain::RepresentationConstRef,
+  virtual bool diff_from_repr(const typename Base::domain::Representation &,
                               DifferentialReprRefType _mat) const override {
 
     const auto &this_mat = static_cast<const Current *>(this)->crepr();
@@ -30,8 +26,8 @@ private:
   }
 
   virtual bool value_on_repr(
-      typename Base::domain::RepresentationConstRef _in,
-      typename Base::codomain::RepresentationRef _result) const override {
+      const typename Base::domain::Representation &_in,
+      typename Base::codomain::Representation &_result) const override {
     const auto &this_mat = static_cast<const Current *>(this)->crepr();
     std::visit(
         [](const auto &mat, const auto &in, auto &res) {
@@ -63,9 +59,7 @@ private:
   }
 
 public:
-  virtual MatrixTypeId differential_type() const override {
-    return MatrixTypeId::Dense;
-  }
+  virtual MatrixTypeId differential_type() const override { return DT; }
 };
 
 template <typename Domain, typename Codomain>
@@ -101,12 +95,12 @@ public:
 
   using Representation = typename base_t::Representation;
   using DomainRepresentation = typename Domain::Representation;
-  using DomainRepresentationRef = typename Domain::RepresentationRef;
-  using DomainRepresentationConstRef = typename Domain::RepresentationConstRef;
+  using DomainRepresentationRef = typename Domain::Representation &;
+  using DomainRepresentationConstRef = const typename Domain::Representation &;
   using CodomainRepresentation = typename Codomain::Representation;
-  using CodomainRepresentationRef = typename Codomain::RepresentationRef;
+  using CodomainRepresentationRef = typename Codomain::Representation &;
   using CodomainRepresentationConstRef =
-      typename Codomain::RepresentationConstRef;
+      const typename Codomain::Representation &;
 
   // ----------------------------------------------------
   // -------------------  Inheritance -------------------
@@ -142,16 +136,16 @@ public:
 template <typename Domain, typename Codomain>
 class DenseLinearMap
     : public LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
-                                        Map<Domain, Codomain>,
+                                        LinearMap<Domain, Codomain>,
                                         MatrixTypeId::Dense> {
-  using base_t =
-      LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
-                                 Map<Domain, Codomain>, MatrixTypeId::Dense>;
+  using base_t = LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
+                                            LinearMap<Domain, Codomain>,
+                                            MatrixTypeId::Dense>;
 
 public:
   using T = DenseMatrix<Codomain::dimension, Domain::dimension>;
   DenseLinearMap() : base_t(T()) {}
-  DenseLinearMap(DenseMatrixConstRef in) : base_t(in) {}
+  DenseLinearMap(const T &in) : base_t(in) {}
   DenseLinearMap(SparseMatrixConstRef in) : base_t(in.get().toDense()) {}
 
   DenseLinearMap(const DenseLinearMap &that) : base_t(that) {}
@@ -166,6 +160,46 @@ public:
     return *this;
   }
   DenseLinearMap &
+  operator=(const MatrixManifold<Codomain::dimension, Domain::dimension> &in) {
+    base_t::operator=(std::get<T>(in.crepr()));
+    return *this;
+  }
+
+  virtual DifferentialReprType linearization_buffer() const override {
+    return T();
+  }
+
+private:
+  using base_t::operator=;
+};
+
+template <typename Domain, typename Codomain>
+class SparseLinearMap
+    : public LinearMapInheritanceHelper<SparseLinearMap<Domain, Codomain>,
+                                        Map<Domain, Codomain>,
+                                        MatrixTypeId::Dense> {
+  using base_t =
+      LinearMapInheritanceHelper<SparseLinearMap<Domain, Codomain>,
+                                 Map<Domain, Codomain>, MatrixTypeId::Dense>;
+
+public:
+  using T = DenseMatrix<Codomain::dimension, Domain::dimension>;
+  SparseLinearMap() : base_t(T()) {}
+  SparseLinearMap(DenseMatrixConstRef in) : base_t(in) {}
+  SparseLinearMap(SparseMatrixConstRef in) : base_t(in.get().toDense()) {}
+
+  SparseLinearMap(const SparseLinearMap &that) : base_t(that) {}
+  SparseLinearMap(SparseLinearMap &&that) : base_t(std::move(that)) {}
+
+  SparseLinearMap &operator=(DenseMatrixRef in) {
+    this->repr() = in;
+    return *this;
+  }
+  SparseLinearMap &operator=(const SparseLinearMap &in) {
+    base_t::operator=(in);
+    return *this;
+  }
+  SparseLinearMap &
   operator=(const MatrixManifold<Codomain::dimension, Domain::dimension> &in) {
     base_t::operator=(std::get<T>(in.crepr()));
     return *this;
