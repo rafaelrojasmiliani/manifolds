@@ -75,9 +75,10 @@ public:
   // -------------------------------------------
 
   /// Constructor from a typed map
-  MapComposition(const map_t &m) : MapBaseComposition(m) {}
+  template <typename M> MapComposition(const M &m) : MapBaseComposition(m) {}
   /// Move-Constructor from a typed map
-  MapComposition(map_t &&m) : MapBaseComposition(std::move(m)) {}
+  template <typename M>
+  MapComposition(M &&m) : MapBaseComposition(std::move(m)) {}
 
   /// Copy constructor from a typed map
   MapComposition(const MapComposition &m) : MapBaseComposition(m) {}
@@ -100,9 +101,11 @@ public:
   // -------------------------------------------
   // -------- Modifiers ------------------------
   // -------------------------------------------
-  template <typename OtherDomainType>
-  MapComposition<OtherDomainType, CoDomainType>
-  compose(const Map<OtherDomainType, DomainType> &_in) const & {
+  template <typename T>
+  auto compose(const T &_in)
+      const & -> MapComposition<typename T::domain, CoDomainType> {
+    static_assert(
+        std::is_base_of_v<Map<typename T::domain, typename T::codomain>, T>);
     MapBaseComposition result(_in.clone());
     result.append(_in);
     return result;
@@ -156,13 +159,13 @@ protected:
                 typename CoDomainType::Representation &_result) const override {
     static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
     static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
-    auto m1 = DomainType::Ref(_in);
-    auto m2 = CoDomainType::Ref(_result);
+    DomainType m1 = DomainType::CRef(&_in);
+    CoDomainType m2 = CoDomainType::Ref(&_result);
     return value_impl(&m1, &m2);
   }
   virtual bool diff_from_repr(const typename DomainType::Representation &_in,
                               DifferentialReprRefType _mat) const override {
-    auto m1 = DomainType::Ref(_in);
+    DomainType m1 = DomainType::CRef(_in);
     return diff_impl(&m1, _mat);
   }
   MapComposition() = default;
@@ -172,4 +175,11 @@ private:
 
   MapComposition(MapBaseComposition &&in) : MapBaseComposition(std::move(in)) {}
 };
+template <typename T>
+MapComposition(const T &m)
+    -> MapComposition<typename T::domain, typename T::codomain>;
+template <typename T>
+MapComposition(T &&m)
+    -> MapComposition<typename T::domain, typename T::codomain>;
+/// Move-Constructor from a typed map
 } // namespace manifolds

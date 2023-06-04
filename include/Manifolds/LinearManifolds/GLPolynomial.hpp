@@ -14,252 +14,6 @@
 
 namespace manifolds {
 
-template <std::size_t NumPoints>
-class GLPolynomial
-    : public LinearManifoldInheritanceHelper<GLPolynomial<NumPoints>,
-                                             LinearManifold<NumPoints>>,
-      public MapInheritanceHelper<GLPolynomial<NumPoints>, Map<Reals, Reals>,
-                                  MatrixTypeId::Dense> {
-
-private:
-  mutable std::array<double, NumPoints> evaluation_buffer_;
-
-public:
-  using base_t = LinearManifoldInheritanceHelper<GLPolynomial<NumPoints>,
-                                                 LinearManifold<NumPoints>>;
-
-  using base_t::base_t;
-
-  using base_t::operator=;
-
-  GLPolynomial(const GLPolynomial &) = default;
-  GLPolynomial(GLPolynomial &&) = default;
-
-  const GLPolynomial &operator=(const GLPolynomial &that) {
-    base_t::operator=(that);
-    return *this;
-  }
-
-  /// ----------------------------------------
-  /// --------  Constants -------------------
-  /// ----------------------------------------
-  /// Gauss-lobatto points
-  static constexpr std::array<double, NumPoints> gl_points =
-      manifolds::collocation::detail::compute_glp<NumPoints>();
-  /// Gauss-lobatto weights
-  static constexpr std::array<double, NumPoints> g_weights =
-      manifolds::collocation::detail::compute_glw<NumPoints>();
-  /// Barycentry weights
-  static constexpr std::array<double, NumPoints> barycentric_weights =
-      manifolds::collocation::detail::barycentric_weights<NumPoints>(
-          manifolds::collocation::detail::compute_glp<NumPoints>());
-  /// Derivative Matrix
-  static Eigen::Matrix<double, NumPoints, NumPoints> derivative_matrix() {
-    static Eigen::Matrix<double, NumPoints, NumPoints> result =
-        Eigen::Map<Eigen::Matrix<double, NumPoints, NumPoints>>(
-            collocation::detail::derivative_matrix<NumPoints>(gl_points)
-                .data());
-    return result;
-  }
-  /// Derivative Matrix of deg ,
-  template <std::size_t M>
-  static Eigen::Matrix<double, NumPoints, NumPoints>
-  derivative_matrix_order_m() {
-    static Eigen::Matrix<double, NumPoints, NumPoints> result =
-        Eigen::Map<Eigen::Matrix<double, NumPoints, NumPoints>>(
-            collocation::detail::derivative_matrix_order_m<NumPoints, M>(
-                gl_points)
-                .data());
-    return result;
-  }
-
-  // static std::optional<std::array<double, NumPoints>>
-  // barycentric_weights_ =
-  // {}; static std::optional<Eigen::Matrix<double, NumPoints, NumPoints>>
-  //     derivative_matrix_ = {};
-
-  bool value_on_repr(const double &in, double &result) const override {
-
-    result = evaluation(this->crepr(), in);
-    return true;
-  }
-
-  /**
-   * Evaluation of gauss-lobatto polynomial.
-   *  David A. Kopriva
-   *  Implementing Spectral
-   *  Methods for Partial
-   *  Differential Equations
-   *  Algorithm 34: LagrangeInterpolatingPolynomials */
-  static double evaluation(const Eigen::Vector<double, NumPoints> &vec,
-                           double in) {
-    static std::array<double, NumPoints> evaluation_buffer;
-    double result;
-
-    for (std::size_t i = 0; i < NumPoints; i++)
-      if (std::fabs(gl_points[i] - in) < 1.0e-9) {
-        return vec(i);
-      }
-
-    memset(evaluation_buffer.data(), 0.0, NumPoints);
-    double t_book, s_book;
-
-    s_book = 0.0;
-    for (std::size_t j = 0; j < NumPoints; j++) {
-      t_book = barycentric_weights[j] / (in - gl_points[j]);
-      evaluation_buffer[j] = t_book;
-      s_book += t_book;
-    }
-    for (std::size_t j = 0; j < NumPoints; j++)
-      evaluation_buffer[j] /= s_book;
-
-    result = 0.0;
-    for (std::size_t j = 0; j < NumPoints; j++)
-      result += vec(j) * evaluation_buffer[j];
-
-    return result;
-  }
-
-  virtual bool diff_from_repr(const double &_in,
-                              Eigen::Ref<Eigen::MatrixXd> _mat) const override {
-
-    _mat(0, 0) = evaluation_derivative(this->crepr(), _in);
-    return true;
-  }
-
-  static double
-  evaluation_derivative(const Eigen::Vector<double, NumPoints> &vec,
-                        double _in) {
-
-    /*  David A. Kopriva
-     *  Implementing Spectral
-     *  Methods for Partial
-     *  Differential Equations
-     *  Algorithm 36: mthOrderPolynomialDerivativeMatrix*/
-    bool atNode = false;
-    double numerator = 0.0;
-    double denominator = 0.0;
-    double p_book = 0.0;
-    std::size_t i_book = 0;
-    for (std::size_t j = 0; j < NumPoints; j++)
-      if (std::fabs(gl_points[j] - _in) < 1.0e-9) {
-        atNode = true;
-        denominator = -barycentric_weights[j];
-        i_book = j;
-        p_book = vec(j);
-      }
-
-    if (atNode) {
-      for (std::size_t j = 0; j < NumPoints; j++)
-        if (i_book != j)
-          numerator = numerator + barycentric_weights[j] * (p_book - vec(j)) /
-                                      (_in - gl_points[j]);
-    } else {
-      denominator = 0.0;
-      p_book = evaluation(vec, _in);
-      for (std::size_t j = 0; j < NumPoints; j++) {
-        double t = barycentric_weights[j] / (_in - gl_points[j]);
-        numerator = numerator + t * (p_book - vec(j)) / (_in - gl_points[j]);
-        denominator += t;
-      }
-    }
-    return numerator / denominator;
-  }
-
-  template <std::size_t Deg> class Derivative;
-
-  class Integral;
-
-  static GLPolynomial<NumPoints> identity() {
-    return GLPolynomial<NumPoints>(
-        Eigen::Map<const Eigen::Matrix<double, NumPoints, 1>>(
-            gl_points.data()));
-  }
-
-  static GLPolynomial<NumPoints> constant(double val) {
-    return GLPolynomial<NumPoints>(
-        Eigen::Map<Eigen::Matrix<double, NumPoints, 1>>(
-            std::vector<double>(NumPoints, val).data()));
-  }
-};
-
-template <std::size_t NumPoints, std::size_t CoDomainDim>
-class GLVPolynomial
-    : public LinearManifoldInheritanceHelper<
-          GLPolynomial<NumPoints>, LinearManifold<NumPoints * CoDomainDim>>,
-      public MapInheritanceHelper<GLPolynomial<NumPoints>,
-                                  Map<Reals, LinearManifold<CoDomainDim>>> {
-
-private:
-  mutable std::array<double, NumPoints> evaluation_buffer_;
-
-public:
-  using base_t =
-      LinearManifoldInheritanceHelper<GLPolynomial<NumPoints>,
-                                      LinearManifold<NumPoints * CoDomainDim>>;
-
-  using base_t::base_t;
-
-  using base_t::operator=;
-
-  using base_t::dimension;
-
-  GLVPolynomial(const GLVPolynomial &) = default;
-  GLVPolynomial(GLVPolynomial &&) = default;
-
-  const GLVPolynomial &operator=(const GLVPolynomial &that) {
-    base_t::operator=(that);
-    return *this;
-  }
-
-  static constexpr std::array<double, NumPoints> gl_points =
-      manifolds::collocation::detail::compute_glp<NumPoints>();
-  static constexpr std::array<double, NumPoints> g_weights =
-      manifolds::collocation::detail::compute_glw<NumPoints>();
-  static constexpr std::array<double, NumPoints> barycentric_weights =
-      manifolds::collocation::detail::barycentric_weights<NumPoints>(
-          manifolds::collocation::detail::compute_glp<NumPoints>());
-
-  // static std::optional<std::array<double, NumPoints>> barycentric_weights_ =
-  // {}; static std::optional<Eigen::Matrix<double, NumPoints, NumPoints>>
-  //     derivative_matrix_ = {};
-
-  bool value_on_repr(const double &in,
-                     Eigen::Vector<double, CoDomainDim> &out) const override {
-
-    for (std::size_t i = 0; i < CoDomainDim; i++) {
-      out(i) = GLPolynomial<NumPoints>::evaluation(
-          this->crerp().segment<NumPoints>(i * NumPoints), in);
-    }
-    return true;
-  }
-
-  virtual bool diff_from_repr(const double &_in,
-                              Eigen::Ref<Eigen::MatrixXd> _mat) const override {
-    for (std::size_t i = 0; i < CoDomainDim; i++) {
-      _mat(i, 0) =
-          GLPolynomial<NumPoints>::evaluation_derivative(this->crerp(), _in);
-    }
-    return true;
-  }
-
-  template <std::size_t Deg> class Derivative;
-
-  class Integral;
-
-  static GLPolynomial<NumPoints> identity() {
-    return GLPolynomial<NumPoints>(
-        Eigen::Map<const Eigen::Matrix<double, NumPoints, 1>>(
-            gl_points.data()));
-  }
-
-  static GLPolynomial<NumPoints> constant(double val) {
-    return GLPolynomial<NumPoints>(
-        Eigen::Map<Eigen::Matrix<double, NumPoints, 1>>(
-            std::vector<double>(NumPoints, val).data()));
-  }
-};
-
 /** Piece-wise Gauss Lobatto polynomial
  * NumPoints: number of gauss-lobato points
  * Intervals: number of intervals
@@ -272,7 +26,7 @@ class PWGLVPolynomial
           LinearManifold<NumPoints * CoDomainDim * Intervals>>,
       public MapInheritanceHelper<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-          Map<Reals, LinearManifold<CoDomainDim>>> {
+          Map<DenseLinearManifold<1>, DenseLinearManifold<CoDomainDim>>> {
 
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
@@ -377,8 +131,7 @@ public:
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
 
-      out(i) = GLPolynomial<NumPoints>::evaluation(
-          aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim)), in);
+      out(i) = evaluation(aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim)), in);
     }
     return true;
   }
@@ -391,7 +144,7 @@ public:
       Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
-      _mat(i, 0) = GLPolynomial<NumPoints>::evaluation_derivative(
+      _mat(i, 0) = evaluation_derivative(
                        aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim)), _in) *
                    2.0 / domain_partition_.subinterval_length(interval);
     }
@@ -407,19 +160,79 @@ public:
 
   template <typename CoDomain> class Composition;
 
-  /// ---------------------------------------------------------
-  /// --------------- Default Elements ------------
-  /// ---------------------------------------------------------
-  static GLPolynomial<NumPoints> identity() {
-    return GLPolynomial<NumPoints>(
-        Eigen::Map<const Eigen::Matrix<double, NumPoints, 1>>(
-            gl_points.data()));
+  /*  David A. Kopriva
+   *  Implementing Spectral
+   *  Methods for Partial
+   *  Differential Equations
+   *  Algorithm 36: mthOrderPolynomialDerivativeMatrix*/
+  static double
+  evaluation_derivative(const Eigen::Vector<double, NumPoints> &vec,
+                        double _in) {
+
+    bool atNode = false;
+    double numerator = 0.0;
+    double denominator = 0.0;
+    double p_book = 0.0;
+    std::size_t i_book = 0;
+    for (std::size_t j = 0; j < NumPoints; j++)
+      if (std::fabs(gl_points[j] - _in) < 1.0e-9) {
+        atNode = true;
+        denominator = -barycentric_weights[j];
+        i_book = j;
+        p_book = vec(j);
+      }
+
+    if (atNode) {
+      for (std::size_t j = 0; j < NumPoints; j++)
+        if (i_book != j)
+          numerator = numerator + barycentric_weights[j] * (p_book - vec(j)) /
+                                      (_in - gl_points[j]);
+    } else {
+      denominator = 0.0;
+      p_book = evaluation(vec, _in);
+      for (std::size_t j = 0; j < NumPoints; j++) {
+        double t = barycentric_weights[j] / (_in - gl_points[j]);
+        numerator = numerator + t * (p_book - vec(j)) / (_in - gl_points[j]);
+        denominator += t;
+      }
+    }
+    return numerator / denominator;
   }
 
-  static GLPolynomial<NumPoints> constant(double val) {
-    return GLPolynomial<NumPoints>(
-        Eigen::Map<Eigen::Matrix<double, NumPoints, 1>>(
-            std::vector<double>(NumPoints, val).data()));
+  /**
+   * Evaluation of gauss-lobatto polynomial.
+   *  David A. Kopriva
+   *  Implementing Spectral
+   *  Methods for Partial
+   *  Differential Equations
+   *  Algorithm 34: LagrangeInterpolatingPolynomials */
+  static double evaluation(const Eigen::Vector<double, NumPoints> &vec,
+                           double in) {
+    static std::array<double, NumPoints> evaluation_buffer;
+    double result;
+
+    for (std::size_t i = 0; i < NumPoints; i++)
+      if (std::fabs(gl_points[i] - in) < 1.0e-9) {
+        return vec(i);
+      }
+
+    memset(evaluation_buffer.data(), 0.0, NumPoints);
+    double t_book, s_book;
+
+    s_book = 0.0;
+    for (std::size_t j = 0; j < NumPoints; j++) {
+      t_book = barycentric_weights[j] / (in - gl_points[j]);
+      evaluation_buffer[j] = t_book;
+      s_book += t_book;
+    }
+    for (std::size_t j = 0; j < NumPoints; j++)
+      evaluation_buffer[j] /= s_book;
+
+    result = 0.0;
+    for (std::size_t j = 0; j < NumPoints; j++)
+      result += vec(j) * evaluation_buffer[j];
+
+    return result;
   }
 };
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>

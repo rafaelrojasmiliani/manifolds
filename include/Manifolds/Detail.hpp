@@ -51,10 +51,10 @@ public:                                                                        \
 #define __DEFINE_CLONE_FUNCTIONS(THISCLASS, C, B)                              \
 public:                                                                        \
   std::unique_ptr<C> clone() const {                                           \
-    return std::unique_ptr<C *>(clone_impl());                                 \
+    return std::unique_ptr<C>(static_cast<C *>(clone_impl()));                 \
   }                                                                            \
   std::unique_ptr<C> move_clone() {                                            \
-    return std::unique_ptr<C *>(move_clone_impl());                            \
+    return std::unique_ptr<C>(static_cast<C *>(move_clone_impl()));            \
   }                                                                            \
                                                                                \
 protected:                                                                     \
@@ -74,3 +74,15 @@ public:                                                                        \
   C &operator=(const C &) = default;                                           \
   C &operator=(C &&) = default;                                                \
   virtual ~C() = default;
+
+#define __DEFAULT_REF(C, B)                                                    \
+public:                                                                        \
+  static constexpr C Ref(typename B::Representation *in) { return C(in); }     \
+  static constexpr C CRef(const typename B::Representation *in) {              \
+    return C(in);                                                              \
+  }                                                                            \
+  static constexpr C Ref(typename B::Representation &in) { return C(&in); }    \
+                                                                               \
+  static constexpr C CRef(const typename B::Representation &in) {              \
+    return C(&in);                                                             \
+  }

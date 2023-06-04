@@ -50,7 +50,8 @@ public:
 
   __INHERIT_LIVE_CYCLE(Base)
   __DEFAULT_LIVE_CYCLE(LinearManifoldInheritanceHelper)
-  __DEFINE_CLONE_FUNCTIONS(LinearManifoldInheritanceHelper, Current, Base)
+  __DEFINE_CLONE_FUNCTIONS(ThisClass, Current, Base)
+  __DEFAULT_REF(Current, Base)
 };
 
 /// Left multiplication by scalar
@@ -71,6 +72,8 @@ auto operator*(double m, const LinearManifoldInheritanceHelper<C, B> &that) {
 
 template <long Rows, long Cols>
 using RealTuplesBase = Manifold<LinearManifoldAtlas<Rows, Cols>, true>;
+template <long Rows, long Cols>
+using DenseRealTuplesBase = Manifold<LinearManifoldAtlas<Rows, Cols>, true>;
 
 template <long Rows, long Cols>
 class MatrixManifold
@@ -158,6 +161,7 @@ public:
       LinearManifoldInheritanceHelper<DenseMatrixManifold<Rows, Cols>,
                                       MatrixManifold<Rows, Cols>,
                                       MatrixTypeId::Dense>;
+  using base_t::base_t;
   using T = DenseMatrix<Rows, Cols>;
   DenseMatrixManifold() : base_t(T()) {}
   DenseMatrixManifold(DenseMatrixConstRef in) : base_t(in) {}

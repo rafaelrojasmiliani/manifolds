@@ -151,7 +151,7 @@ public:
   DenseLinearMap(const DenseLinearMap &that) : base_t(that) {}
   DenseLinearMap(DenseLinearMap &&that) : base_t(std::move(that)) {}
 
-  DenseLinearMap &operator=(DenseMatrixRef in) {
+  DenseLinearMap &operator=(T &in) {
     this->repr() = in;
     return *this;
   }

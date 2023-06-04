@@ -6,10 +6,10 @@
 
 namespace manifolds {
 
-class Reals : public Manifold<RealsAtlas, true> {
-  template <typename T, typename U> friend class Map;
-  template <typename T, typename U> friend class MapComposition;
-};
+/* class Reals : public Manifold<RealsAtlas, true> { */
+/*   template <typename T, typename U> friend class Map; */
+/*   template <typename T, typename U> friend class MapComposition; */
+/* }; */
 
 /* class Reals::Lifting */
 /*     : public MapInheritanceHelper<Reals::Lifting, Map<Reals, Reals, false>> {

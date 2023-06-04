@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Core>
+#include <Manifolds/Detail.hpp>
 #include <Manifolds/ManifoldBase.hpp>
 #include <exception>
 #include <iostream>
@@ -8,24 +9,51 @@
 #include <type_traits>
 namespace manifolds {
 
+/// Inheritance helper
+template <typename Current, typename Base>
+class ManifoldInheritanceHelper : public Base {
+private:
+  using ThisClass = ManifoldInheritanceHelper<Current, Base>;
+
+public:
+  using Base::Base;
+  ManifoldInheritanceHelper(const ThisClass &_in) : Base(_in) {}
+  ManifoldInheritanceHelper(ThisClass &&_in) : Base(std::move(_in)) {}
+  virtual ~ManifoldInheritanceHelper() = default;
+
+  std::unique_ptr<Current> clone() const {
+    return std::unique_ptr<Current>(static_cast<Current *>(clone_impl()));
+  }
+
+  std::unique_ptr<Current> move_clone() {
+    return std::unique_ptr<Current>(static_cast<Current *>(move_clone_impl()));
+  }
+
+  // virtual bool is_faithfull() const = 0;
+  using Base::operator=;
+
+protected:
+  virtual ThisClass *clone_impl() const override {
+
+    return new Current(*static_cast<const Current *>(this));
+  }
+
+  virtual ThisClass *move_clone_impl() override {
+    return new Current(std::move(*static_cast<Current *>(this)));
+  }
+  __DEFAULT_REF(Current, Base)
+};
+
 template <typename Atlas, bool Faithfull = false>
-class Manifold : public ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>,
-                                                  ManifoldBase>,
-                 public Atlas {
+class Manifold : public ManifoldBase, public Atlas {
   template <typename T, typename U> friend class Map;
   template <typename T, typename U> friend class MapComposition;
 
-  using base_t =
-      ManifoldInheritanceHelper<Manifold<Atlas, Faithfull>, ManifoldBase>;
+  using base_t = ManifoldBase;
 
 public:
   using Representation = std::decay_t<typename Atlas::Representation>;
   using RepresentationRef = typename Atlas::RepresentationRef;
-  using RepresentationConstRef = typename Atlas::RepresentationConstRef;
-  using Atlas::cref_to_type;
-  using Atlas::ctype_to_ref;
-  using Atlas::ref_to_type;
-  using Atlas::type_to_ref;
 
 protected:
   Representation *representation_;
@@ -55,6 +83,8 @@ public:
       : base_t(std::move(that)),
         representation_(new Representation(std::move(*that.representation_))),
         const_representation_(representation_), onwing_(true) {
+    if (that.onwing_)
+      delete that.representation_;
     that.representation_ = nullptr;
     that.const_representation_ = nullptr;
     that.onwing_ = false;
@@ -115,17 +145,17 @@ public:
   static constexpr bool is_faithfull = Faithfull;
 
   // Get a manifold representation of a piece of data
-  static constexpr Manifold Ref(Representation *in) { return Manifold(in); }
+  // static constexpr Manifold Ref(Representation *in) { return Manifold(in); }
   // Get a manifold representation of a piece of data
-  static constexpr Manifold Ref(const Representation *in) {
-    return Manifold(in);
-  }
+  // static constexpr Manifold Ref(const Representation *in) {
+  // return Manifold(in);
+  //}
   // Get a manifold representation of a piece of data
-  static constexpr Manifold Ref(Representation &in) { return Manifold(&in); }
+  // static constexpr Manifold Ref(Representation &in) { return Manifold(&in); }
 
-  static constexpr Manifold Ref(const Representation &in) {
-    return Manifold(&in);
-  }
+  // static constexpr Manifold Ref(const Representation &in) {
+  //   return Manifold(&in);
+  // }
 
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   // ++++++ Casting  and implicid Cast consturcotrs  +++++++++++++++++++++++++++
@@ -145,7 +175,11 @@ public:
   constexpr operator std::enable_if_t<F, Representation> &&() && {
     if (not representation_)
       throw std::logic_error("Trying to assign to a constnat manifold element");
-    return std::move(*representation_);
+    auto &&temp = std::move(*representation_);
+    delete representation_;
+    representation_ = nullptr;
+    const_representation_ = nullptr;
+    return std::move(temp);
   }
 
   template <bool F = Faithfull>
@@ -180,7 +214,7 @@ public:
   class Parametrization;
   class ChangeOfCoordinates;
 
-private:
+protected:
   /// SNIFAE of constructors: Make non faithfull private. If the manifold is
   /// not faithfull, the following constructor we be private, This is to avoid
   /// constructing objects from its representation
@@ -225,6 +259,26 @@ protected:
       throw std::logic_error("Trying to assign to a constnat manifold element");
     return std::move(*representation_);
   };
+
+public:
+  std::unique_ptr<Manifold> clone() const {
+    return std::unique_ptr<Manifold>(static_cast<Manifold *>(clone_impl()));
+  }
+
+  std::unique_ptr<Manifold> move_clone() {
+    return std::unique_ptr<Manifold>(
+        static_cast<Manifold *>(move_clone_impl()));
+  }
+
+protected:
+  virtual Manifold *clone_impl() const override {
+
+    return new Manifold(*static_cast<const Manifold *>(this));
+  }
+
+  virtual Manifold *move_clone_impl() override {
+    return new Manifold(std::move(*static_cast<Manifold *>(this)));
+  }
 };
 
 template <typename M> static constexpr bool manifold_sanity_check() {
