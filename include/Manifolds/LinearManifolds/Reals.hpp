@@ -1,15 +1,26 @@
 #pragma once
 #include <Manifolds/Atlases/Reals.h>
+#include <Manifolds/Detail.hpp>
+#include <Manifolds/LinearManifolds/LinearManifolds.hpp>
 #include <Manifolds/Manifold.hpp>
 #include <Manifolds/Maps/Map.hpp>
 #include <functional>
 
 namespace manifolds {
 
-/* class Reals : public Manifold<RealsAtlas, true> { */
-/*   template <typename T, typename U> friend class Map; */
-/*   template <typename T, typename U> friend class MapComposition; */
-/* }; */
+class Reals
+    : public LinearManifoldInheritanceHelper<Reals,
+                                             Manifold<RealsAtlas, true>> {
+public:
+  using base_t =
+      LinearManifoldInheritanceHelper<Reals, Manifold<RealsAtlas, true>>;
+  using Representation = typename base_t::Representation;
+  using base_t::base_t;
+  using base_t::operator=;
+  __DEFAULT_LIVE_CYCLE(Reals)
+
+  class Lifting;
+};
 
 /* class Reals::Lifting */
 /*     : public MapInheritanceHelper<Reals::Lifting, Map<Reals, Reals, false>> {

@@ -76,35 +76,44 @@ namespace manifolds {
 /*   } */
 /* }; */
 
-class Interval : public ManifoldInheritanceHelper<Interval, LinearManifold<2>> {
+class Interval
+    : public ManifoldInheritanceHelper<Interval,
+                                       DenseRealTuplesBase<2, 1, false>> {
 public:
-  using base_t = ManifoldInheritanceHelper<Interval, LinearManifold<2>>;
+  using base_t =
+      ManifoldInheritanceHelper<Interval, DenseRealTuplesBase<2, 1, false>>;
   using base_t::base_t;
-  Interval(const std::pair<double, double> _pair)
-      : base_t(Eigen::Vector2d({_pair.first, _pair.second})) {}
+
+  Interval(const std::initializer_list<double> _pair)
+      : base_t(Eigen::Vector2d({_pair})) {
+    if (_pair.size() != 2)
+      throw std::logic_error("");
+  }
+
+  Interval(const Interval &) = default;
 
   Interval &operator=(const std::pair<double, double> &_pair) {
     this->repr() = Eigen::Vector2d({_pair.first, _pair.second});
     return *this;
   }
   double length() const {
-    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    const auto &vec = this->crepr();
     return vec(1) - vec(0);
   }
 
   double first() const {
 
-    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    const auto &vec = this->crepr();
     return vec(0);
   }
   double second() const {
 
-    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    const auto &vec = this->crepr();
     return vec(1);
   }
 
   bool contains(double val) const {
-    const auto &vec = std::get<Eigen::Vector2d>(this->crepr());
+    const auto &vec = this->crepr();
     return vec(0) - std::numeric_limits<double>::epsilon() <= val and
            val <= vec(1) + -std::numeric_limits<double>::epsilon();
   }
@@ -117,9 +126,13 @@ public:
 
 template <std::size_t NumberOfIntervals>
 class IntervalPartition
-    : public Manifold<LinearManifoldAtlas<NumberOfIntervals, 1>, false> {
+    : public ManifoldInheritanceHelper<
+          IntervalPartition<NumberOfIntervals>,
+          DenseRealTuplesBase<NumberOfIntervals, 1, false>> {
 public:
-  using base_t = Manifold<LinearManifoldAtlas<NumberOfIntervals, 1>, false>;
+  using base_t = ManifoldInheritanceHelper<
+      IntervalPartition<NumberOfIntervals>,
+      DenseRealTuplesBase<NumberOfIntervals, 1, false>>;
   using base_t::base_t;
   IntervalPartition(
       const Interval &_interval,
@@ -131,6 +144,7 @@ public:
       : base_t(), interval_(_interval) {
     this->repr().array() = interval_.length() / NumberOfIntervals;
   }
+
   IntervalPartition(const std::pair<double, double> &_interval)
       : base_t(), interval_(_interval) {
     this->repr().array() = interval_.length() / NumberOfIntervals;
@@ -151,6 +165,22 @@ public:
       if (t0 - std::numeric_limits<double>::epsilon() <= val and
           val <= t1 + std::numeric_limits<double>::epsilon())
         return i;
+      t0 = t1;
+    }
+    throw std::invalid_argument("outside interval");
+  }
+
+  std::tuple<std::size_t, double>
+  subinterval_index_and_canonic_value(double val) const {
+    double t0 = interval_.first();
+    double t1;
+    for (std::size_t i = 0; i < NumberOfIntervals; i++) {
+      t1 = t0 + this->crepr()(i);
+      if (t0 - std::numeric_limits<double>::epsilon() <= val and
+          val <= t1 + std::numeric_limits<double>::epsilon()) {
+
+        return {i, 2 * (val - t0) / (t1 - t0) - 1.0};
+      }
       t0 = t1;
     }
     throw std::invalid_argument("outside interval");

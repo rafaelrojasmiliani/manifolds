@@ -59,10 +59,16 @@ public:                                                                        \
                                                                                \
 protected:                                                                     \
   virtual THISCLASS *clone_impl() const override {                             \
+    static_assert(std::is_base_of_v<THISCLASS, C>,                             \
+                  "INHERITANCE HELPER ERROR " #THISCLASS                       \
+                  " is not a base of " #C);                                    \
     return new C(*static_cast<const C *>(this));                               \
   }                                                                            \
                                                                                \
   virtual THISCLASS *move_clone_impl() override {                              \
+    static_assert(std::is_base_of_v<THISCLASS, C>,                             \
+                  "INHERITANCE HELPER ERROR " #THISCLASS                       \
+                  " is not a base of " #C);                                    \
     return new C(std::move(*static_cast<C *>(this)));                          \
   }
 
@@ -86,3 +92,7 @@ public:                                                                        \
   static constexpr C CRef(const typename B::Representation &in) {              \
     return C(&in);                                                             \
   }
+
+#define THROW_OUTSIDE_DOMAIN                                                   \
+  trow std::logic_error(                                                       \
+      "The function is a partial function. You cannot introduce any values");

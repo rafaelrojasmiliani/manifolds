@@ -16,36 +16,14 @@ private:
   using ThisClass = ManifoldInheritanceHelper<Current, Base>;
 
 public:
-  using Base::Base;
-  ManifoldInheritanceHelper(const ThisClass &_in) : Base(_in) {}
-  ManifoldInheritanceHelper(ThisClass &&_in) : Base(std::move(_in)) {}
-  virtual ~ManifoldInheritanceHelper() = default;
-
-  std::unique_ptr<Current> clone() const {
-    return std::unique_ptr<Current>(static_cast<Current *>(clone_impl()));
-  }
-
-  std::unique_ptr<Current> move_clone() {
-    return std::unique_ptr<Current>(static_cast<Current *>(move_clone_impl()));
-  }
-
-  // virtual bool is_faithfull() const = 0;
-  using Base::operator=;
-
-protected:
-  virtual ThisClass *clone_impl() const override {
-
-    return new Current(*static_cast<const Current *>(this));
-  }
-
-  virtual ThisClass *move_clone_impl() override {
-    return new Current(std::move(*static_cast<Current *>(this)));
-  }
+  __INHERIT_LIVE_CYCLE(Base)
+  __DEFAULT_LIVE_CYCLE(ManifoldInheritanceHelper)
+  __DEFINE_CLONE_FUNCTIONS(ManifoldInheritanceHelper, Current, Base)
   __DEFAULT_REF(Current, Base)
 };
 
 template <typename Atlas, bool Faithfull = false>
-class Manifold : public ManifoldBase, public Atlas {
+class Manifold : public ManifoldBase {
   template <typename T, typename U> friend class Map;
   template <typename T, typename U> friend class MapComposition;
 
@@ -54,6 +32,11 @@ class Manifold : public ManifoldBase, public Atlas {
 public:
   using Representation = std::decay_t<typename Atlas::Representation>;
   using RepresentationRef = typename Atlas::RepresentationRef;
+  static constexpr std::size_t dimension = Atlas::dimension;
+  static constexpr std::size_t tangent_repr_dimension =
+      Atlas::tangent_repr_dimension;
+
+  using atlas = Atlas;
 
 protected:
   Representation *representation_;
@@ -69,7 +52,8 @@ public:
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   /// Default constructor. calls default constructor of its representation
   Manifold()
-      : base_t(), representation_(new Representation()),
+      : base_t(),
+        representation_(new Representation(Atlas::random_projection())),
         const_representation_(representation_), onwing_(true) {}
   /// Copy constructor. Copy construct the representation into the holding
   /// pointer
@@ -100,14 +84,14 @@ public:
   // Assignment with manifold operator
   const Manifold &operator=(const Manifold &_other) {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error("Trying to assign to a constant manifold element");
     *representation_ = _other.crepr();
     return *this;
   }
   // Move assignment with manifold operator
   const Manifold &operator=(Manifold &&_other) {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error("Trying to assign to a constant manifold element");
     *representation_ = std::move(*_other.representation_);
     delete _other.representation_;
     _other.representation_ = nullptr;
@@ -124,7 +108,7 @@ public:
   std::enable_if_t<F, Manifold<Atlas, Faithfull>> &
   operator=(const Representation &_other) {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error("Trying to assign to a constant manifold element");
     *representation_ = _other;
     return *this;
   }
@@ -134,7 +118,7 @@ public:
   std::enable_if_t<F, Manifold<Atlas, Faithfull>> &
   operator=(Representation &&_other) {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifol element");
+      throw std::logic_error("Trying to assign to a constant manifol element");
     *representation_ = std::move(_other);
     return *this;
   }
@@ -167,14 +151,14 @@ public:
   template <bool F = Faithfull>
   constexpr operator std::enable_if_t<F, Representation> &() & {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error("Trying to assign to a constant manifold element");
     return *representation_;
   }
 
   template <bool F = Faithfull>
   constexpr operator std::enable_if_t<F, Representation> &&() && {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error("Trying to assign to a constant manifold element");
     auto &&temp = std::move(*representation_);
     delete representation_;
     representation_ = nullptr;
@@ -183,7 +167,7 @@ public:
   }
 
   template <bool F = Faithfull>
-  constexpr Manifold(const std::enable_if_t<F, Representation> &_in)
+  explicit constexpr Manifold(const std::enable_if_t<F, Representation> &_in)
       : base_t(), representation_(new Representation(_in)),
         const_representation_(representation_), onwing_(true) {}
 
@@ -201,11 +185,67 @@ public:
   std::size_t get_tanget_repr_dim() const override {
     return Atlas::tangent_repr_dimension;
   }
+
+  static Representation random_projection() {
+    return Atlas::random_projection();
+  }
+
+  bool has_value() const override {
+    return const_representation_ != nullptr or representation_ != nullptr;
+  }
+
   /// Get const referece to the representtion
   constexpr const Representation &crepr() const {
     return *const_representation_;
   };
 
+  template <bool F = Faithfull>
+  constexpr std::enable_if_t<F, Representation> &repr() {
+    if (not representation_)
+      throw std::logic_error(
+          "Trying to get a non constant reference to a constant manifold");
+    return *representation_;
+  };
+
+  template <bool F = Faithfull>
+  constexpr std::enable_if_t<F, Representation> &&mrepr() {
+    if (not representation_)
+      throw std::logic_error(
+          "Trying to get a non constant reference to a constant manifold");
+    return std::move(*representation_);
+  };
+
+  // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  // ++++++++++++++++++ Comparison  +++++++++++++++++++++++++++++++++++++++++++
+  // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  virtual bool
+  is_equal(const std::unique_ptr<ManifoldBase> &_other) const override {
+    if (this == _other.get())
+      return true;
+    if (not _other->is_same<Manifold<Atlas, Faithfull>>())
+      throw std::logic_error(
+          "You are trying to compare elements from different manifolds");
+    return *this == *dynamic_cast<Manifold<Atlas, Faithfull> *>(_other.get());
+  }
+
+  bool operator==(const Manifold &_that) const {
+    return Atlas::comparison(this->crepr(), _that.crepr());
+  }
+
+  bool operator!=(const Manifold &_that) const { return not operator==(_that); }
+
+  /*
+  template <bool F = Faithfull>
+  std::enable_if_t<F, bool> operator==(const Representation &_that) {
+    return Atlas::comparison(this->crepr(), _that);
+  }
+
+  template <bool F = Faithfull>
+  std::enable_if_t<F, bool> operator!=(const Representation &_that) {
+    return not Atlas::comparison(this->crepr(), _that);
+  }
+  */
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   // ++++++++++++++++++ Charts, Params and change of coordinates ++++++++++++++
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -221,7 +261,8 @@ protected:
 
   // Cast constructor from representation
   template <bool F = Faithfull>
-  constexpr Manifold(const std::enable_if_t<not F, Representation> &_in)
+  explicit constexpr Manifold(
+      const std::enable_if_t<not F, Representation> &_in)
       : base_t(), representation_(new Representation(_in)),
         const_representation_(representation_), onwing_(true) {}
 
@@ -242,21 +283,34 @@ protected:
 
   /// override assign but private
   void assign(const std::unique_ptr<ManifoldBase> &_other) override {
-    if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+    if (representation_ == nullptr and const_representation_ != nullptr)
+      throw std::logic_error("Trying to assign to a constant manifold");
+
+    if (dynamic_cast<Manifold<Atlas, Faithfull> *>(_other.get()) == nullptr)
+      throw std::logic_error(
+          "You are trying to assign differenty types of manifold");
+
+    if (not representation_ and not const_representation_)
+      *representation_ = Representation();
+
     *representation_ =
         static_cast<Manifold<Atlas, Faithfull> *>(_other.get())->crepr();
+    const_representation_ = representation_;
   }
 
 protected:
-  constexpr Representation &repr() {
+  template <bool F = Faithfull>
+  constexpr std::enable_if_t<not F, Representation> &repr() {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error(
+          "Trying to get a non constant reference to a constant manifold");
     return *representation_;
   };
-  constexpr Representation &&mrepr() {
+  template <bool F = Faithfull>
+  constexpr std::enable_if_t<not F, Representation> &&mrepr() {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constnat manifold element");
+      throw std::logic_error(
+          "Trying to get a non constant reference to a constant manifold");
     return std::move(*representation_);
   };
 

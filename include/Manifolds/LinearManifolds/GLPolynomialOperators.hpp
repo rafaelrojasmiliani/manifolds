@@ -1,40 +1,22 @@
 #pragma once
 #include <Manifolds/LinearManifolds/GLPolynomial.hpp>
+#include <Manifolds/LinearManifolds/LinearMaps.hpp>
 
 namespace manifolds {
-
-template <std::size_t NumPoints>
-template <std::size_t Deg>
-class GLPolynomial<NumPoints>::Derivative
-    : public MapInheritanceHelper<
-          GLPolynomial<NumPoints>::Derivative<Deg>,
-          LinearMap<GLPolynomial<NumPoints>, GLPolynomial<NumPoints>>> {
-public:
-  using base_t = MapInheritanceHelper<
-      GLPolynomial<NumPoints>::Derivative<Deg>,
-      LinearMap<GLPolynomial<NumPoints>, GLPolynomial<NumPoints>>>;
-  Derivative() : base_t(GLPolynomial::derivative_matrix_order_m<Deg>()) {}
-};
 
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 template <std::size_t Deg>
 class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Derivative
-    : public LinearManifoldInheritanceHelper<
+    : public LinearMapInheritanceHelper<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Derivative<Deg>,
           SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
                           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>>> {
 
-  using base_t = MapInheritanceHelper<
-      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Derivative<Deg>,
-      LinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-                PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>>>;
-
 public:
-  using base_t::base_t;
-  using base_t::codomain_dimension;
-  using base_t::dimension;
-  using base_t::domain_dimension;
-  using base_t::operator=;
+  using base_t = LinearMapInheritanceHelper<
+      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Derivative<Deg>,
+      SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>>>;
 
   Derivative(const Interval &_interval)
       : base_t(), domain_interval_(_interval) {
@@ -54,9 +36,12 @@ private:
   IntervalPartition<Intervals> domain_interval_;
   static Eigen::SparseMatrix<double> get() {
     static const Eigen::Matrix<double, NumPoints, NumPoints> dmat =
-        GLPolynomial<NumPoints>::template derivative_matrix_order_m<Deg>();
+        PWGLVPolynomial<NumPoints, Intervals,
+                        CoDomainDim>::template derivative_matrix_order_m<Deg>();
 
-    Eigen::SparseMatrix<double> result(codomain_dimension, domain_dimension);
+    Eigen::SparseMatrix<double> result(
+        PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension,
+        PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension);
 
     /*
     for (std::size_t k = 0; k < base_t::domain_dimension; k += NumPoints) {
@@ -95,6 +80,7 @@ PWGLVPolynomialSpace<NumPoints, Intervals, CoDomainDim>::derivative() {
 }
 
 //---------------------------------------
+/*
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 template <typename OtherCoDomain>
 class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Composition
@@ -141,5 +127,5 @@ public:
 
 private:
   std::unique_ptr<Map<LinearManifold<CoDomainDim>, OtherCoDomain, true>> map_;
-};
+};*/
 } // namespace manifolds

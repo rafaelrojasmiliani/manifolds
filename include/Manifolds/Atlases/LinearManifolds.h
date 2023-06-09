@@ -1,7 +1,10 @@
 #pragma once
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <random>
 #include <variant>
+
+#define MAX_ELEMENTS_FOR_DENSE 20000
 
 template <typename IN> auto &&matrix_manifold_ref_to_type(IN &&in) {
 
@@ -40,9 +43,9 @@ void matrix_manifold_assing(LHS &&_lhs, RHS &&_rhs) {
 
 template <long Rows, long Cols> class LinearManifoldAtlas {
   static constexpr long EffectiveCols =
-      (Rows * Cols < 20000) ? Cols : Eigen::Dynamic;
+      (Rows * Cols < MAX_ELEMENTS_FOR_DENSE) ? Cols : Eigen::Dynamic;
   static constexpr long EffectiveRows =
-      (Rows * Cols < 20000) ? Rows : Eigen::Dynamic;
+      (Rows * Cols < MAX_ELEMENTS_FOR_DENSE) ? Rows : Eigen::Dynamic;
 
 private:
   using DenseMatrix = Eigen::Matrix<double, EffectiveRows, EffectiveCols>;
@@ -122,7 +125,13 @@ public:
     result = ChartDifferential::Identity();
   }
 
-  static Representation random_projection() { return Representation::Random(); }
+  static Representation random_projection() {
+    if (dimension < MAX_ELEMENTS_FOR_DENSE)
+      return DenseMatrix::Random();
+
+    else
+      return get_sparse_random();
+  }
 
   static void change_of_coordinates(const Representation &,
                                     const Representation &, const Coordinates &,
@@ -143,6 +152,66 @@ public:
   static constexpr std::size_t dimension = Rows * Cols;
 
   static constexpr std::size_t tangent_repr_dimension = Rows * Cols;
+
+  static bool comparison(const Representation &_lhs,
+                         const Representation &_rhs) {
+
+    double _tol = 1.0e-12;
+    double err = 0;
+    double lhs_max = 0;
+    double rhs_max = 0;
+    std::visit(
+        [&err, &lhs_max, &rhs_max](const auto &lhs, const auto rhs) {
+          if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>,
+                                       DenseMatrix> or
+                        std::is_same_v<decltype(rhs), DenseMatrix>) {
+            err = DenseMatrix(lhs - rhs).array().abs().maxCoeff();
+          } else {
+            err = SparseMatrix(lhs - rhs).coeffs().abs().maxCoeff();
+          }
+
+          if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>,
+                                       DenseMatrix>) {
+            lhs_max = (lhs).array().abs().maxCoeff();
+          } else {
+            lhs_max = (lhs).coeffs().abs().maxCoeff();
+          }
+          if constexpr (std::is_same_v<std::decay_t<decltype(rhs)>,
+                                       DenseMatrix>) {
+            rhs_max = (rhs).array().abs().maxCoeff();
+          } else {
+            rhs_max = (rhs).coeffs().abs().maxCoeff();
+          }
+        },
+        _lhs, _rhs);
+
+    if (lhs_max < _tol or rhs_max < _tol) {
+      return err < _tol;
+    }
+
+    return err / lhs_max < _tol and err / rhs_max < _tol;
+  }
+
+  static SparseMatrix get_sparse_random() {
+    std::default_random_engine gen;
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    std::uniform_int_distribution<long> dist_rows(0, Rows - 1);
+    std::uniform_int_distribution<long> dist_cols(0, Cols - 1);
+
+    int rows = Rows;
+    int cols = Cols;
+
+    std::size_t nzn = rows * cols * 0.05;
+
+    std::vector<Eigen::Triplet<double>> tripletList;
+    for (std::size_t i = 0; i < nzn; i++)
+      tripletList.push_back(
+          Eigen::Triplet<double>(dist_rows(gen), dist_cols(gen), dist(gen)));
+
+    SparseMatrix mat(rows, cols);
+    mat.setFromTriplets(tripletList.begin(), tripletList.end());
+    return mat;
+  }
 };
 
 template <long Rows, long Cols> class DenseLinearManifoldAtlas {
@@ -211,27 +280,49 @@ public:
   static constexpr std::size_t dimension = Rows * Cols;
 
   static constexpr std::size_t tangent_repr_dimension = Rows * Cols;
+
+  static bool comparison(const Representation &_lhs,
+                         const Representation &_rhs) {
+    double _tol = 1.0e-12;
+    double err = 0;
+    double lhs_max = 0;
+    double rhs_max = 0;
+    err = (_lhs - _rhs).array().abs().maxCoeff();
+    lhs_max = _lhs.array().abs().maxCoeff();
+    rhs_max = _rhs.array().abs().maxCoeff();
+
+    if (lhs_max < _tol or rhs_max < _tol) {
+      return err < _tol;
+    }
+
+    return err / lhs_max < _tol and err / rhs_max < _tol;
+  }
 };
 
-template <long EffectiveRows, long EffectiveCols, long Dim>
-class SparseLinearManifoldAtlas {
+template <long Rows, long Cols> class SparseLinearManifoldAtlas {
+  static constexpr long EffectiveCols =
+      (Rows * Cols < MAX_ELEMENTS_FOR_DENSE) ? Cols : Eigen::Dynamic;
+  static constexpr long EffectiveRows =
+      (Rows * Cols < MAX_ELEMENTS_FOR_DENSE) ? Rows : Eigen::Dynamic;
+
+private:
+  using SparseMatrix = Eigen::SparseMatrix<double>;
+
 public:
-  static const constexpr bool is_differential_sparse = true;
-  using Representation = Eigen::SparseMatrix<double>;
+  static const constexpr bool is_differential_sparse = false;
+  using Representation = SparseMatrix;
+  using RepresentationRef = SparseMatrix &;
 
   using Coordinates = Eigen::Matrix<double, EffectiveRows * EffectiveCols, 1>;
 
-  using ChartDifferential = Eigen::SparseMatrix<double>;
-  using ChartDifferentialRef =
-      std::reference_wrapper<Eigen::SparseMatrix<double>>;
-
-  using ChangeOfCoordinatesDiff = Eigen::SparseMatrix<double>;
-  using ChangeOfCoordinatesDiffRef =
-      std::reference_wrapper<Eigen::SparseMatrix<double>>;
-
-  using ParametrizationDifferential = Eigen::SparseMatrix<double>;
-  using ParametrizationDifferentialRef =
-      std::reference_wrapper<Eigen::SparseMatrix<double>>;
+  using ChartDifferential = Eigen::Matrix<double, EffectiveRows * EffectiveCols,
+                                          EffectiveRows * EffectiveCols>;
+  using ChangeOfCoordinatesDiff =
+      Eigen::Matrix<double, EffectiveRows * EffectiveCols,
+                    EffectiveRows * EffectiveCols>;
+  using ParametrizationDifferential =
+      Eigen::Matrix<double, EffectiveRows * EffectiveCols,
+                    EffectiveRows * EffectiveCols>;
 
   using Tangent = Eigen::Matrix<double, EffectiveRows * EffectiveCols, 1>;
 
@@ -241,31 +332,77 @@ public:
   }
 
   static void chart_diff(const Representation &, const Representation &,
-                         const Representation &, ChartDifferentialRef) {}
+                         const Representation &,
+                         Eigen::Ref<ChartDifferential> result) {
 
-  static void param(const Representation &, const Representation &,
-                    const Coordinates &, Representation &) {}
-
-  static void param_diff(const Representation &, const Representation &,
-                         const Coordinates &, ParametrizationDifferentialRef) {}
-
-  static Representation random_projection() {
-    return Representation(EffectiveRows, EffectiveCols);
+    result = ChartDifferential::Identity();
   }
 
-  static void
-  change_of_coordinates(const Representation &, const Representation &,
-                        const Representation &, const Representation &,
-                        const Coordinates &coordinates, Coordinates &result) {
+  static void param(const Representation &, const Representation &,
+                    const Coordinates &coordinates, Representation &result) {
+    result = Eigen::Map<const Representation>(coordinates.data());
+  }
+
+  static void param_diff(const Representation &, const Representation &,
+                         const Coordinates &,
+                         Eigen::Ref<ChartDifferential> result) {
+    result = ChartDifferential::Identity();
+  }
+
+  static Representation random_projection() {
+    std::mt19937 gen;
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    std::uniform_int_distribution<long> dist_rows(0, Rows - 1);
+    std::uniform_int_distribution<long> dist_cols(0, Cols - 1);
+
+    int rows = Rows;
+    int cols = Cols;
+
+    std::size_t nzn = rows * cols * 0.01;
+
+    std::vector<Eigen::Triplet<double>> tripletList;
+    for (std::size_t i = 0; i < nzn; i++)
+      tripletList.emplace_back(dist_rows(gen), dist_cols(gen), dist(gen));
+
+    SparseMatrix mat(rows, cols);
+    mat.setFromTriplets(tripletList.begin(), tripletList.end());
+    return mat;
+  }
+
+  static void change_of_coordinates(const Representation &,
+                                    const Representation &, const Coordinates &,
+                                    const Coordinates &,
+                                    const Coordinates &coordinates,
+                                    Coordinates &result) {
     result = coordinates;
   }
 
   static void
   change_of_coordinates_diff(const Representation &, const Representation &,
                              const Representation &, const Representation &,
-                             const Coordinates &, ChangeOfCoordinatesDiffRef) {}
+                             const Coordinates &,
+                             Eigen::Ref<ChangeOfCoordinatesDiff> result) {
+    result = ChangeOfCoordinatesDiff::Identity();
+  }
 
-  static constexpr std::size_t dimension = Dim;
+  static constexpr std::size_t dimension = Rows * Cols;
 
-  static constexpr std::size_t tangent_repr_dimension = Dim;
+  static constexpr std::size_t tangent_repr_dimension = Rows * Cols;
+
+  static bool comparison(const Representation &_lhs,
+                         const Representation &_rhs) {
+    double _tol = 1.0e-12;
+    double err = 0;
+    double lhs_max = 0;
+    double rhs_max = 0;
+    err = Representation(_lhs - _rhs).coeffs().abs().maxCoeff();
+    lhs_max = _lhs.coeffs().abs().maxCoeff();
+    rhs_max = _rhs.coeffs().abs().maxCoeff();
+
+    if (lhs_max < _tol or rhs_max < _tol) {
+      return err < _tol;
+    }
+
+    return err / lhs_max < _tol and err / rhs_max < _tol;
+  }
 };

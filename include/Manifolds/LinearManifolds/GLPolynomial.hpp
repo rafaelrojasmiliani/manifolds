@@ -12,6 +12,8 @@
 #include <functional>
 #include <optional>
 
+#include <Eigen/Dense>
+
 namespace manifolds {
 
 /** Piece-wise Gauss Lobatto polynomial
@@ -23,10 +25,10 @@ template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 class PWGLVPolynomial
     : public LinearManifoldInheritanceHelper<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-          LinearManifold<NumPoints * CoDomainDim * Intervals>>,
+          DenseLinearManifold<NumPoints * CoDomainDim * Intervals>>,
       public MapInheritanceHelper<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-          Map<DenseLinearManifold<1>, DenseLinearManifold<CoDomainDim>>> {
+          Map<Reals, DenseLinearManifold<CoDomainDim>>, MatrixTypeId::Dense> {
 
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
@@ -40,7 +42,7 @@ public:
   using interval_t = std::pair<double, double>;
   using base_t = LinearManifoldInheritanceHelper<
       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-      LinearManifold<NumPoints * CoDomainDim * Intervals>>;
+      DenseLinearManifold<NumPoints * CoDomainDim * Intervals>>;
 
   using base_t::dimension;
   using base_t::operator=;
@@ -107,16 +109,6 @@ public:
       throw std::invalid_argument("");
   }
 
-  Eigen::Ref<Eigen::Vector<double, CoDomainDim>>
-  operator[](const std::size_t i) {
-    return this->repr().segment(i * CoDomainDim, CoDomainDim);
-  }
-  Eigen::Ref<const Eigen::Vector<double, CoDomainDim>>
-  operator[](const std::size_t i) const {
-    return this->crepr().segment(i * CoDomainDim, CoDomainDim);
-  }
-
-  std::size_t size() const { return NumPoints * Intervals; }
   /// ---------------------------------------------------------
   /// --------------- Evaluation of the polynomial ------------
   /// ---------------------------------------------------------
@@ -124,14 +116,16 @@ public:
   bool value_on_repr(const double &in,
                      Eigen::Vector<double, CoDomainDim> &out) const override {
 
-    std::size_t interval = this->domain_partition_.subinterval_index(in);
+    auto [interval, s] =
+        this->domain_partition_.subinterval_index_and_canonic_value(in);
     for (std::size_t i = 0; i < CoDomainDim; i++) {
 
       Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
 
-      out(i) = evaluation(aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim)), in);
+      out(i) =
+          evaluation(aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim), 0), s);
     }
     return true;
   }
@@ -139,13 +133,16 @@ public:
   virtual bool diff_from_repr(const double &_in,
                               Eigen::Ref<Eigen::MatrixXd> _mat) const override {
 
-    std::size_t interval = this->domain_partition_.subinterval_index(_in);
+    auto [interval, s] =
+        this->domain_partition_.subinterval_index_and_canonic_value(_in);
     for (std::size_t i = 0; i < CoDomainDim; i++) {
+
       Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
+
       _mat(i, 0) = evaluation_derivative(
-                       aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim)), _in) *
+                       aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim), 0), s) *
                    2.0 / domain_partition_.subinterval_length(interval);
     }
     return true;
@@ -160,13 +157,17 @@ public:
 
   template <typename CoDomain> class Composition;
 
+  /// ---------------------------------------------------------
+  /// --------------- Polynomial evaluation -------------------
+  /// ---------------------------------------------------------
+
   /*  David A. Kopriva
    *  Implementing Spectral
    *  Methods for Partial
    *  Differential Equations
    *  Algorithm 36: mthOrderPolynomialDerivativeMatrix*/
   static double
-  evaluation_derivative(const Eigen::Vector<double, NumPoints> &vec,
+  evaluation_derivative(Eigen::Ref<const Eigen::Vector<double, NumPoints>> vec,
                         double _in) {
 
     bool atNode = false;
@@ -216,7 +217,7 @@ public:
         return vec(i);
       }
 
-    memset(evaluation_buffer.data(), 0.0, NumPoints);
+    memset(evaluation_buffer.data(), 0.0, NumPoints * sizeof(double));
     double t_book, s_book;
 
     s_book = 0.0;
@@ -234,7 +235,99 @@ public:
 
     return result;
   }
+
+  /// Derivative Matrix
+  static Eigen::Matrix<double, NumPoints, NumPoints> derivative_matrix() {
+    static Eigen::Matrix<double, NumPoints, NumPoints> result =
+        Eigen::Map<Eigen::Matrix<double, NumPoints, NumPoints>>(
+            collocation::detail::derivative_matrix<NumPoints>(gl_points)
+                .data());
+    return result;
+  }
+  /// Derivative Matrix of deg ,
+  template <std::size_t M>
+  static Eigen::Matrix<double, NumPoints, NumPoints>
+  derivative_matrix_order_m() {
+    static Eigen::Matrix<double, NumPoints, NumPoints> result =
+        Eigen::Map<Eigen::Matrix<double, NumPoints, NumPoints>>(
+            collocation::detail::derivative_matrix_order_m<NumPoints, M>(
+                gl_points)
+                .data());
+    return result;
+  }
+  /// ---------------------------------------------------------
+  /// --------------- Getters ---------------------------------
+  /// ---------------------------------------------------------
+
+  const Interval &get_domain() const { return domain_partition_.interval(); }
+
+  Eigen::MatrixXd &points() {
+    return this->repr().reshaped(NumPoints * Intervals, CoDomainDim);
+  }
+
+  Eigen::Ref<Eigen::Vector<double, CoDomainDim>>
+  operator[](const std::size_t i) {
+    return this->repr().segment(i * CoDomainDim, CoDomainDim);
+  }
+
+  Eigen::Ref<const Eigen::Vector<double, CoDomainDim>>
+  operator[](const std::size_t i) const {
+    return this->crepr().segment(i * CoDomainDim, CoDomainDim);
+  }
+
+  Eigen::Ref<Eigen::Vector<double, CoDomainDim>>
+  codomain_point(const std::size_t i) {
+    return this->repr().segment(i * CoDomainDim, CoDomainDim);
+  }
+
+  Eigen::Ref<const Eigen::Vector<double, CoDomainDim>>
+  codomain_point(const std::size_t i) const {
+    return this->crepr().segment(i * CoDomainDim, CoDomainDim);
+  }
+
+  double domain_point(std::size_t idx) const {
+    const double &glp = this->gl_points[idx % NumPoints];
+    std::size_t interval = idx / NumPoints;
+
+    return domain_partition_.interval().first() +
+           domain_partition_.crepr().array().segment(0, interval).sum() +
+           (glp + 1) / 2.0 * domain_partition_.subinterval_length(interval);
+  }
+
+  std::size_t size() const { return NumPoints * Intervals; }
+
+  // ---------------------------------------
+  // ------ Default Elements ---------------
+  // ---------------------------------------
+
+  static PWGLVPolynomial
+  constant(const Interval &_interval,
+           const Eigen::Vector<double, CoDomainDim> &_vals) {
+
+    PWGLVPolynomial result(_interval);
+
+    for (std::size_t i = 0; i < result.size(); i++) {
+      result[i] = _vals;
+    }
+
+    return result;
+  }
+
+  template <bool F = CoDomainDim == 1>
+  static std::enable_if_t<F, PWGLVPolynomial>
+  identity(const Interval &_interval) {
+
+    PWGLVPolynomial result(_interval);
+
+    Eigen::Matrix<double, 100, 1> mat;
+    for (std::size_t i = 0; i < result.size(); i++) {
+      result[i](0) = result.domain_point(i);
+    }
+
+    return result;
+  }
 };
+
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 class PWGLVPolynomialSpace {
 private:
@@ -242,8 +335,6 @@ private:
 
 public:
   PWGLVPolynomialSpace(const Interval &_interval) : interval_(_interval) {}
-  PWGLVPolynomialSpace(const std::pair<double, double> &_interval)
-      : interval_(_interval) {}
 
   PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> polynomial() {
     return PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>(interval_);

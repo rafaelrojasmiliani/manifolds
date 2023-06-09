@@ -104,6 +104,7 @@ public:
     value(_in, result);
     return result;
   }
+
   // ---------------------------------
   // Defintion of bool value(in, out)
   // ---------------------------------
@@ -216,6 +217,23 @@ public:
   }
 
   // ---------------------------------
+  // Defintion of bool diff(in)
+  // ---------------------------------
+  template <bool F = (not DomainType::is_faithfull)>
+  std::enable_if_t<F, DifferentialReprType> diff(const DomainType &_in) const {
+    auto _out = this->linearization_buffer();
+    diff_from_repr(_in.crepr(), _out);
+    return _out;
+  }
+
+  template <bool F = DomainType::is_faithfull>
+  std::enable_if_t<F, DifferentialReprType>
+  diff(const typename DomainType::Representation &_in) const {
+    auto _out = this->linearization_buffer();
+    diff_from_repr(_in, _out);
+    return _out;
+  }
+  // ---------------------------------
   // Defintion of Composition
   // ---------------------------------
   template <typename OtherDomainType, bool OtherDiffIsSparse>
@@ -317,24 +335,60 @@ class MapInheritanceHelper<Current, Base, MatrixTypeId::Dense> : public Base {
   __DEFINE_CLONE_FUNCTIONS(MapInheritanceHelper, Current, Base)
 
 private:
-  virtual bool
-  diff_from_repr(const typename Current::DomainType::Representation &_in,
-                 DifferentialReprRefType _mat) const override {
-    return diff_from_repr(_in, std::get<1>(_mat));
+  virtual bool diff_from_repr(const typename Base::domain::Representation &_in,
+                              DifferentialReprRefType _mat) const override {
+    return diff_from_repr(_in, (Eigen::Ref<Eigen::MatrixXd>)std::get<0>(_mat));
   }
 
 public:
-  virtual bool
-  diff_from_repr(const typename Current::DomainType::Representation &_in,
-                 Eigen::Ref<Eigen::MatrixXd> _mat) const = 0;
+  virtual bool diff_from_repr(const typename Base::domain::Representation &_in,
+                              Eigen::Ref<Eigen::MatrixXd> _mat) const = 0;
 
   virtual MatrixTypeId differential_type() const override {
     return MatrixTypeId::Dense;
   }
 
   virtual DifferentialReprType linearization_buffer() const override {
-    return Eigen::Matrix<double, Current::domain::tangent_repr_dimension,
-                         Current::codomain::tangent_repr_dimension>();
+    return Eigen::Matrix<double, Base::codomain::tangent_repr_dimension,
+                         Current::domain::tangent_repr_dimension>();
+  }
+  // ---------------------------------
+  // Differntial
+  // ---------------------------------
+
+  // ---------------------------------
+  // Defintion of bool diff(in, out)
+  // ---------------------------------
+  template <bool F = (not Base::domain::is_faithfull)>
+  std::enable_if_t<F, bool> diff(const typename Base::domain &_in,
+                                 Eigen::Ref<Eigen::MatrixXd> _out) const {
+    return Base::diff_from_repr(_in.crepr(), (Eigen::Ref<Eigen::MatrixXd>)_out);
+  }
+
+  template <bool F = Base::domain::is_faithfull>
+  std::enable_if_t<F, bool>
+  diff(const typename Base::domain::Representation &_in,
+       Eigen::Ref<Eigen::MatrixXd> _out) const {
+    return Base::diff_from_repr(_in, _out);
+  }
+
+  // ---------------------------------
+  // Defintion of bool diff(in)
+  // ---------------------------------
+  template <bool F = (not Base::domain::is_faithfull)>
+  std::enable_if_t<F, Eigen::MatrixXd>
+  diff(const typename Base::domain &_in) const {
+    auto _out = this->linearization_buffer();
+    diff_from_repr(_in.crepr(), (Eigen::Ref<Eigen::MatrixXd>)std::get<0>(_out));
+    return std::get<0>(_out);
+  }
+
+  template <bool F = Base::domain::is_faithfull>
+  std::enable_if_t<F, Eigen::MatrixXd>
+  diff(const typename Base::domain::Representation &_in) const {
+    auto _out = this->linearization_buffer();
+    diff_from_repr(_in, Eigen::Ref<Eigen::MatrixXd>(std::get<0>(_out)));
+    return std::get<0>(_out);
   }
 };
 
@@ -363,8 +417,8 @@ public:
 
   virtual DifferentialReprType linearization_buffer() const override {
     Eigen::SparseMatrix<double> result;
-    result.resize(Current::domain::tangent_repr_dimension,
-                  Current::codomain::tangent_repr_dimension);
+    result.resize(Current::codomain::tangent_repr_dimension,
+                  Current::domain::tangent_repr_dimension);
     return result;
   }
 };

@@ -10,7 +10,6 @@ class ManifoldBase {
 private:
   friend class MapBase;
   friend class MapBaseComposition;
-  virtual void assign(const std::unique_ptr<ManifoldBase> &_other) = 0;
 
 public:
   using Representation = void *;
@@ -29,6 +28,15 @@ public:
   ManifoldBase(const ManifoldBase &) = default;
   ManifoldBase(ManifoldBase &&) = default;
   ManifoldBase() = default;
+
+  virtual bool has_value() const = 0;
+  virtual void assign(const std::unique_ptr<ManifoldBase> &_other) = 0;
+
+  template <typename T> bool is_same() const {
+    return dynamic_cast<const std::decay_t<T> *>(this) != nullptr;
+  }
+
+  virtual bool is_equal(const std::unique_ptr<ManifoldBase> &_other) const = 0;
 
 protected:
   virtual ManifoldBase *clone_impl() const = 0;

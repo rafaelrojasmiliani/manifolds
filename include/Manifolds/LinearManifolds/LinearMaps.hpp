@@ -7,12 +7,12 @@ namespace manifolds {
 
 template <typename Current, typename Base,
           MatrixTypeId DT = MatrixTypeId::Mixed>
-class LinearMapInheritanceHelper : public Base {
+class MixedLinearMapInheritanceHelper : public Base {
 
 public:
   __INHERIT_LIVE_CYCLE(Base)
-  __DEFAULT_LIVE_CYCLE(LinearMapInheritanceHelper)
-  __DEFINE_CLONE_FUNCTIONS(LinearMapInheritanceHelper, Current, Base)
+  __DEFAULT_LIVE_CYCLE(MixedLinearMapInheritanceHelper)
+  __DEFINE_CLONE_FUNCTIONS(MixedLinearMapInheritanceHelper, Current, Base)
 
 private:
   virtual bool diff_from_repr(const typename Base::domain::Representation &,
@@ -62,22 +62,60 @@ public:
   virtual MatrixTypeId differential_type() const override { return DT; }
 };
 
+template <typename Current, typename Base>
+
+class LinearMapInheritanceHelper : public Base {
+
+public:
+  __INHERIT_LIVE_CYCLE(Base)
+  __DEFAULT_LIVE_CYCLE(LinearMapInheritanceHelper)
+  __DEFINE_CLONE_FUNCTIONS(LinearMapInheritanceHelper, Current, Base)
+
+private:
+  virtual bool diff_from_repr(const typename Base::domain::Representation &,
+                              DifferentialReprRefType _mat) const override {
+
+    std::get<0>(_mat) = static_cast<const Current *>(this)->crepr();
+
+    return true;
+  }
+
+  virtual bool value_on_repr(
+      const typename Base::domain::Representation &_in,
+      typename Base::codomain::Representation &_result) const override {
+    _result = static_cast<const Current *>(this)->crepr() * _in;
+    return true;
+  }
+
+public:
+  virtual MatrixTypeId differential_type() const override {
+    if constexpr (std::is_base_of_v<Eigen::Dense,
+                                    typename Current::Representation>)
+      return MatrixTypeId::Dense;
+    else
+      return MatrixTypeId::Sparse;
+  }
+  virtual DifferentialReprType linearization_buffer() const override {
+    return typename Current::Representation();
+  }
+};
+
 template <typename Domain, typename Codomain>
-class LinearMap : public LinearManifoldInheritanceHelper<
-                      LinearMap<Domain, Codomain>,
-                      MatrixManifold<Codomain::dimension, Domain::dimension>>,
-                  public LinearMapInheritanceHelper<LinearMap<Domain, Codomain>,
-                                                    Map<Domain, Codomain>> {
+class MixedLinearMap
+    : public MixedLinearManifoldInheritanceHelper<
+          MixedLinearMap<Domain, Codomain>,
+          MixedMatrixManifold<Codomain::dimension, Domain::dimension>>,
+      public MixedLinearMapInheritanceHelper<MixedLinearMap<Domain, Codomain>,
+                                             Map<Domain, Codomain>> {
 
   // ------------------------
   // --- Static assertions --
   // ------------------------
-  static_assert(std::is_base_of_v<LinearManifold<Domain::dimension>, Domain>,
+  static_assert(std::is_base_of_v<LinearManifold, Domain>,
                 "Linear map must act between vector spaces");
 
-  static_assert(
-      std::is_base_of_v<LinearManifold<Codomain::dimension>, Codomain>,
-      "Linear map must act between vector spaces");
+  static_assert(std::is_base_of_v<LinearManifold, Codomain>,
+                "Linear map must act between vector spaces");
 
   using DenseMatrixType = DenseMatrix<Codomain::tangent_repr_dimension,
                                       Domain::tangent_repr_dimension>;
@@ -89,9 +127,9 @@ public:
   // ----------------------------------------------------
   // -------------------  Taype definitions -------------------
   // ----------------------------------------------------
-  using base_t = LinearManifoldInheritanceHelper<
-      LinearMap<Domain, Codomain>,
-      MatrixManifold<Codomain::dimension, Domain::dimension>>;
+  using base_t = MixedLinearManifoldInheritanceHelper<
+      MixedLinearMap<Domain, Codomain>,
+      MixedMatrixManifold<Codomain::dimension, Domain::dimension>>;
 
   using Representation = typename base_t::Representation;
   using DomainRepresentation = typename Domain::Representation;
@@ -111,16 +149,16 @@ public:
   // ----------------------------------------------------
   // -------------------  Lifecycle -------------------
   // ----------------------------------------------------
-  __DEFAULT_LIVE_CYCLE(LinearMap)
+  __DEFAULT_LIVE_CYCLE(MixedLinearMap)
 
   // ----------------------------------------------------
   // -------------------  composition -------------------
   // ----------------------------------------------------
 
   template <typename OtherDomain>
-  LinearMap<Codomain, OtherDomain>
-  compose(const LinearMap<OtherDomain, Codomain> &_in) const {
-    return LinearMap<Codomain, OtherDomain>(base_t::crepr() * _in.crepr());
+  MixedLinearMap<Codomain, OtherDomain>
+  compose(const MixedLinearMap<OtherDomain, Codomain> &_in) const {
+    return MixedLinearMap<Codomain, OtherDomain>(base_t::crepr() * _in.crepr());
   }
 
   virtual DifferentialReprType linearization_buffer() const override {
@@ -135,96 +173,37 @@ public:
 
 template <typename Domain, typename Codomain>
 class DenseLinearMap
-    : public LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
-                                        LinearMap<Domain, Codomain>,
-                                        MatrixTypeId::Dense> {
-  using base_t = LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
-                                            LinearMap<Domain, Codomain>,
-                                            MatrixTypeId::Dense>;
+    : public LinearManifoldInheritanceHelper<
+          DenseLinearMap<Domain, Codomain>,
+          DenseMatrixManifold<Codomain::dimension, Domain::dimension>>,
+      public LinearMapInheritanceHelper<DenseLinearMap<Domain, Codomain>,
+                                        Map<Domain, Codomain>> {
+  using base_t = LinearManifoldInheritanceHelper<
+      DenseLinearMap<Domain, Codomain>,
+      DenseMatrixManifold<Codomain::dimension, Domain::dimension>>;
 
 public:
-  using T = DenseMatrix<Codomain::dimension, Domain::dimension>;
-  DenseLinearMap() : base_t(T()) {}
-  DenseLinearMap(const T &in) : base_t(in) {}
-  DenseLinearMap(SparseMatrixConstRef in) : base_t(in.get().toDense()) {}
-
-  DenseLinearMap(const DenseLinearMap &that) : base_t(that) {}
-  DenseLinearMap(DenseLinearMap &&that) : base_t(std::move(that)) {}
-
-  DenseLinearMap &operator=(T &in) {
-    this->repr() = in;
-    return *this;
-  }
-  DenseLinearMap &operator=(const DenseLinearMap &in) {
-    base_t::operator=(in);
-    return *this;
-  }
-  DenseLinearMap &
-  operator=(const MatrixManifold<Codomain::dimension, Domain::dimension> &in) {
-    base_t::operator=(std::get<T>(in.crepr()));
-    return *this;
-  }
-
-  virtual DifferentialReprType linearization_buffer() const override {
-    return T();
-  }
-
-private:
+  using base_t::base_t;
   using base_t::operator=;
 };
 
 template <typename Domain, typename Codomain>
 class SparseLinearMap
-    : public LinearMapInheritanceHelper<SparseLinearMap<Domain, Codomain>,
-                                        Map<Domain, Codomain>,
-                                        MatrixTypeId::Dense> {
-  using base_t =
-      LinearMapInheritanceHelper<SparseLinearMap<Domain, Codomain>,
-                                 Map<Domain, Codomain>, MatrixTypeId::Dense>;
+    : public LinearManifoldInheritanceHelper<
+          SparseLinearMap<Domain, Codomain>,
+          SparseMatrixManifold<Codomain::dimension, Domain::dimension>>,
+      public LinearMapInheritanceHelper<SparseLinearMap<Domain, Codomain>,
+                                        Map<Domain, Codomain>> {
+
+  using base_t = LinearManifoldInheritanceHelper<
+      SparseLinearMap<Domain, Codomain>,
+      SparseMatrixManifold<Codomain::dimension, Domain::dimension>>;
 
 public:
-  using T = DenseMatrix<Codomain::dimension, Domain::dimension>;
-  SparseLinearMap() : base_t(T()) {}
-  SparseLinearMap(DenseMatrixConstRef in) : base_t(in) {}
-  SparseLinearMap(SparseMatrixConstRef in) : base_t(in.get().toDense()) {}
-
-  SparseLinearMap(const SparseLinearMap &that) : base_t(that) {}
-  SparseLinearMap(SparseLinearMap &&that) : base_t(std::move(that)) {}
-
-  SparseLinearMap &operator=(DenseMatrixRef in) {
-    this->repr() = in;
-    return *this;
-  }
-  SparseLinearMap &operator=(const SparseLinearMap &in) {
-    base_t::operator=(in);
-    return *this;
-  }
-  SparseLinearMap &
-  operator=(const MatrixManifold<Codomain::dimension, Domain::dimension> &in) {
-    base_t::operator=(std::get<T>(in.crepr()));
-    return *this;
-  }
-
-  virtual DifferentialReprType linearization_buffer() const override {
-    if constexpr (DenseMatrixRef::RowsAtCompileTime == Eigen::Dynamic) {
-      // Is the matrix is so large, return an error if this has a dense matrix
-      if (std::holds_alternative<DenseMatrix>(this->crepr())) {
-        throw std::logic_error("Matrix is too large to be dense");
-        return Eigen::MatrixXd();
-      }
-      return Eigen::SparseMatrix<double>();
-    } else {
-      if (std::holds_alternative<DenseMatrix>(this->crepr())) {
-        return Eigen::MatrixXd();
-      }
-      return Eigen::SparseMatrix<double>();
-    }
-  }
-
-private:
+  using base_t::base_t;
   using base_t::operator=;
 };
 
-using End3 = LinearMap<R3, R3>;
+using End3 = MixedLinearMap<R3, R3>;
 
 } // namespace manifolds
