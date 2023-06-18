@@ -8,14 +8,17 @@
 
 template <typename IN> auto &&matrix_manifold_ref_to_type(IN &&in) {
 
-  if constexpr (std::is_same_v<
-                    std::decay_t<IN>,
-                    std::reference_wrapper<Eigen::SparseMatrix<double>>>) {
-    return std::forward<Eigen::SparseMatrix<double> &>(in.get());
-  } else if constexpr (std::is_same_v<std::decay_t<IN>,
-                                      std::reference_wrapper<
-                                          const Eigen::SparseMatrix<double>>>) {
-    return std::forward<const Eigen::SparseMatrix<double> &>(in.get());
+  if constexpr (std::is_same_v<std::decay_t<IN>,
+                               std::reference_wrapper<Eigen::SparseMatrix<
+                                   double, Eigen::RowMajor>>>) {
+    return std::forward<Eigen::SparseMatrix<double, Eigen::RowMajor> &>(
+        in.get());
+  } else if constexpr (std::is_same_v<
+                           std::decay_t<IN>,
+                           std::reference_wrapper<const Eigen::SparseMatrix<
+                               double, Eigen::RowMajor>>>) {
+    return std::forward<const Eigen::SparseMatrix<double, Eigen::RowMajor> &>(
+        in.get());
   } else
     return std::forward<IN>(in);
 }
@@ -32,9 +35,10 @@ void matrix_manifold_assing(LHS &&_lhs, RHS &&_rhs) {
   const auto &rhs = matrix_manifold_ref_to_type(_rhs);
 
   if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>,
-                               Eigen::SparseMatrix<double>> and
-                not std::is_same_v<std::decay_t<decltype(rhs)>,
-                                   Eigen::SparseMatrix<double>>)
+                               Eigen::SparseMatrix<double, Eigen::RowMajor>> and
+                not std::is_same_v<
+                    std::decay_t<decltype(rhs)>,
+                    Eigen::SparseMatrix<double, Eigen::RowMajor>>)
     lhs = rhs.sparseView();
   else {
     lhs = rhs;
@@ -49,12 +53,13 @@ template <long Rows, long Cols> class LinearManifoldAtlas {
 
 private:
   using DenseMatrix = Eigen::Matrix<double, EffectiveRows, EffectiveCols>;
-  using SparseMatrix = Eigen::SparseMatrix<double>;
+  using SparseMatrix = Eigen::SparseMatrix<double, Eigen::RowMajor>;
   using DenseMatrixRef = Eigen::Ref<Eigen::MatrixXd>;
   using DenseMatrixConstRef = Eigen::Ref<const DenseMatrix>;
-  using SparseMatrixRef = std::reference_wrapper<Eigen::SparseMatrix<double>>;
-  using SparseMatrixConstRef =
-      std::reference_wrapper<const Eigen::SparseMatrix<double>>;
+  using SparseMatrixRef =
+      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
+  using SparseMatrixConstRef = std::reference_wrapper<
+      const Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 
 public:
   static const constexpr bool is_differential_sparse = false;
@@ -306,7 +311,7 @@ template <long Rows, long Cols> class SparseLinearManifoldAtlas {
       (Rows * Cols < MAX_ELEMENTS_FOR_DENSE) ? Rows : Eigen::Dynamic;
 
 private:
-  using SparseMatrix = Eigen::SparseMatrix<double>;
+  using SparseMatrix = Eigen::SparseMatrix<double, Eigen::RowMajor>;
 
 public:
   static const constexpr bool is_differential_sparse = false;

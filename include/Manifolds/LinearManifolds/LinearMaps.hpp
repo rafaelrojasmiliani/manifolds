@@ -35,21 +35,23 @@ private:
           const auto &matrix = matrix_manifold_ref_to_type(mat);
           const auto &vec = matrix_manifold_ref_to_type(in);
 
-          if constexpr (std::is_same_v<std::decay_t<decltype(result)>,
-                                       Eigen::SparseMatrix<double>> and
-                        (std::is_same_v<std::decay_t<decltype(matrix)>,
-                                        Eigen::SparseMatrix<double>> xor
-                         std::is_same_v<std::decay_t<decltype(vec)>,
-                                        Eigen::SparseMatrix<double>>)) {
+          if constexpr (
+              std::is_same_v<std::decay_t<decltype(result)>,
+                             Eigen::SparseMatrix<double, Eigen::RowMajor>> and
+              (std::is_same_v<std::decay_t<decltype(matrix)>,
+                              Eigen::SparseMatrix<double, Eigen::RowMajor>> xor
+               std::is_same_v<std::decay_t<decltype(vec)>,
+                              Eigen::SparseMatrix<double, Eigen::RowMajor>>)) {
             result = (matrix * vec).sparseView();
-          } else if constexpr (std::is_same_v<std::decay_t<decltype(result)>,
-                                              Eigen::SparseMatrix<double>> and
-                               (not std::is_same_v<
-                                    std::decay_t<decltype(matrix)>,
-                                    Eigen::SparseMatrix<double>> and
-                                not std::is_same_v<
-                                    std::decay_t<decltype(vec)>,
-                                    Eigen::SparseMatrix<double>>)) {
+          } else if constexpr (
+              std::is_same_v<std::decay_t<decltype(result)>,
+                             Eigen::SparseMatrix<double, Eigen::RowMajor>> and
+              (not std::is_same_v<
+                   std::decay_t<decltype(matrix)>,
+                   Eigen::SparseMatrix<double, Eigen::RowMajor>> and
+               not std::is_same_v<
+                   std::decay_t<decltype(vec)>,
+                   Eigen::SparseMatrix<double, Eigen::RowMajor>>)) {
             result = (matrix * vec).sparseView();
           } else
             result = matrix * vec;
@@ -121,7 +123,7 @@ class MixedLinearMap
                                       Domain::tangent_repr_dimension>;
   using DenseMatrixTypeRef = DenseMatrixRef;
   using DenseMatrixTypeConstRef = DenseMatrixConstRef;
-  using SparseMatrixType = Eigen::SparseMatrix<double>;
+  using SparseMatrixType = Eigen::SparseMatrix<double, Eigen::RowMajor>;
 
 public:
   // ----------------------------------------------------

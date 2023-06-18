@@ -13,8 +13,9 @@ template <bool Val, std::size_t DomainDim, std::size_t CodomainDim>
 struct DT {};
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<true, DomainDim, CodomainDim> {
-  using Type = Eigen::SparseMatrix<double>;
-  using RefType = std::reference_wrapper<Eigen::SparseMatrix<double>>;
+  using Type = Eigen::SparseMatrix<double, Eigen::RowMajor>;
+  using RefType =
+      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 };
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<false, DomainDim, CodomainDim> {

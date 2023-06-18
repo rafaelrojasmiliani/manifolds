@@ -18,28 +18,29 @@ using DenseMatrixRef = Eigen::Ref<Eigen::MatrixXd>;
 
 using DenseMatrixConstRef = Eigen::Ref<const Eigen::MatrixXd>;
 
-using SparseMatrix = Eigen::SparseMatrix<double>;
+using SparseMatrix = Eigen::SparseMatrix<double, Eigen::RowMajor>;
 
-using SparseMatrixRef = std::reference_wrapper<Eigen::SparseMatrix<double>>;
+using SparseMatrixRef =
+    std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 
 using SparseMatrixConstRef =
-    std::reference_wrapper<const Eigen::SparseMatrix<double>>;
+    std::reference_wrapper<const Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 
 template <long Rows, long Cols>
 using MixedMatrix = std::variant<Eigen::Matrix<double, Rows, Cols>,
-                                 Eigen::SparseMatrix<double>>;
+                                 Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 
 using MixedMatrixRef = std::variant<DenseMatrixRef, SparseMatrixRef>;
 
 using MixedMatrixConstRef =
     std::variant<DenseMatrixConstRef, SparseMatrixConstRef>;
 
-using DifferentialReprRefType =
-    std::variant<Eigen::Ref<Eigen::MatrixXd>,
-                 std::reference_wrapper<Eigen::SparseMatrix<double>>>;
+using DifferentialReprRefType = std::variant<
+    Eigen::Ref<Eigen::MatrixXd>,
+    std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>>;
 
 using DifferentialReprType =
-    std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double>>;
+    std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 
 enum MatrixTypeId { Dense = 0, Sparse, Mixed };
 

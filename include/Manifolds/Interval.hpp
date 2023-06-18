@@ -79,6 +79,9 @@ namespace manifolds {
 class Interval
     : public ManifoldInheritanceHelper<Interval,
                                        DenseRealTuplesBase<2, 1, false>> {
+
+  template <std::size_t NumberOfIntervals> friend class IntervalPartition;
+
 public:
   using base_t =
       ManifoldInheritanceHelper<Interval, DenseRealTuplesBase<2, 1, false>>;
@@ -133,19 +136,21 @@ public:
   using base_t = ManifoldInheritanceHelper<
       IntervalPartition<NumberOfIntervals>,
       DenseRealTuplesBase<NumberOfIntervals, 1, false>>;
+
   using base_t::base_t;
+
   IntervalPartition(
       const Interval &_interval,
       Eigen::Ref<const Eigen::Vector<double, NumberOfIntervals>> in)
       : base_t(), interval_(_interval) {
     this->repr() = in;
   }
-  IntervalPartition(const Interval &_interval)
-      : base_t(), interval_(_interval) {
+  IntervalPartition(const std::initializer_list<double> _pair)
+      : base_t(), interval_(Eigen::Vector2d({_pair})) {
     this->repr().array() = interval_.length() / NumberOfIntervals;
   }
 
-  IntervalPartition(const std::pair<double, double> &_interval)
+  explicit IntervalPartition(const Interval &_interval)
       : base_t(), interval_(_interval) {
     this->repr().array() = interval_.length() / NumberOfIntervals;
   }
@@ -186,7 +191,7 @@ public:
     throw std::invalid_argument("outside interval");
   }
 
-  std::size_t subinterval_length(std::size_t indx) const {
+  double subinterval_length(std::size_t indx) const {
     return this->crepr()(indx);
   }
 

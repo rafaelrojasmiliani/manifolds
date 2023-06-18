@@ -121,7 +121,8 @@ public:
     return *this;
   }
 
-  MixedMatrixManifold &operator=(const Eigen::SparseMatrix<double> &in) {
+  MixedMatrixManifold &
+  operator=(const Eigen::SparseMatrix<double, Eigen::RowMajor> &in) {
     this->repr() = in;
     return *this;
   }
@@ -135,11 +136,13 @@ public:
     return std::get<Eigen::Matrix<double, Rows, Cols>>(this->crepr());
   }
 
-  Eigen::SparseMatrix<double> &eigen_sparse() {
-    return std::get<Eigen::SparseMatrix<double>>(this->repr());
+  Eigen::SparseMatrix<double, Eigen::RowMajor> &eigen_sparse() {
+    return std::get < Eigen::SparseMatrix < double,
+           Eigen::RowMajor >>> (this->repr());
   }
-  const Eigen::SparseMatrix<double> &ceigen_sparse() const {
-    return std::get<Eigen::SparseMatrix<double>>(this->crepr());
+  const Eigen::SparseMatrix<double, Eigen::RowMajor> &ceigen_sparse() const {
+    return std::get<Eigen::SparseMatrix<double, Eigen::RowMajor>>(
+        this->crepr());
   }
 
   bool is_dense() const {
@@ -148,7 +151,8 @@ public:
   }
 
   bool is_sparse() const {
-    return std::holds_alternative<Eigen::SparseMatrix<double>>(this->crepr());
+    return std::holds_alternative < Eigen::SparseMatrix < double,
+           Eigen::RowMajor >>> (this->crepr());
   }
   static DenseMatrix<Rows, Cols> get_dense_random() {
     return DenseMatrix<Rows, Cols>::Random();

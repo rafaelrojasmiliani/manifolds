@@ -76,8 +76,8 @@ public:
 
   DifferentialReprType linearization_buffer() const override {
     if (differential_type()) {
-      return Eigen::SparseMatrix<double>(get_codom_tangent_repr_dim(),
-                                         get_dom_tangent_repr_dim());
+      return Eigen::SparseMatrix<double, Eigen::RowMajor>(
+          get_codom_tangent_repr_dim(), get_dom_tangent_repr_dim());
     } else {
 
       return Eigen::MatrixXd(get_codom_tangent_repr_dim(),

@@ -20,8 +20,9 @@ template <bool Val, std::size_t DomainDim, std::size_t CodomainDim>
 struct DT {};
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<true, DomainDim, CodomainDim> {
-  using Type = Eigen::SparseMatrix<double>;
-  using RefType = std::reference_wrapper<Eigen::SparseMatrix<double>>;
+  using Type = Eigen::SparseMatrix<double, Eigen::RowMajor>;
+  using RefType =
+      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 };
 template <std::size_t DomainDim, std::size_t CodomainDim>
 struct DT<false, DomainDim, CodomainDim> {
@@ -409,14 +410,15 @@ private:
 public:
   virtual bool diff_from_repr(
       const typename Current::DomainType::Representation &_in,
-      std::reference_wrapper<Eigen::SparseMatrix<double>> _mat) const = 0;
+      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>> _mat)
+      const = 0;
 
   virtual MatrixTypeId differential_type() const override {
     return MatrixTypeId::Sparse;
   }
 
   virtual DifferentialReprType linearization_buffer() const override {
-    Eigen::SparseMatrix<double> result;
+    Eigen::SparseMatrix<double, Eigen::RowMajor> result;
     result.resize(Current::codomain::tangent_repr_dimension,
                   Current::domain::tangent_repr_dimension);
     return result;

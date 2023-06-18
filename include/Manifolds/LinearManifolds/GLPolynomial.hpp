@@ -13,8 +13,12 @@
 #include <optional>
 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 namespace manifolds {
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
+          std::size_t ContDeg, bool FixedStartPoint, bool FixedEndPoint>
+class CPWGLWPolynomial;
 
 /** Piece-wise Gauss Lobatto polynomial
  * NumPoints: number of gauss-lobato points
@@ -39,11 +43,17 @@ public:
   // ----------------------------
   // ------ Types ---------------
   // ----------------------------
+  template <std::size_t Deg, bool FixedStartPoint = false,
+            bool FixedEndPoint = false>
+  using Continuous = CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, Deg,
+                                      FixedStartPoint, FixedEndPoint>;
+
   using interval_t = std::pair<double, double>;
   using base_t = LinearManifoldInheritanceHelper<
       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
       DenseLinearManifold<NumPoints * CoDomainDim * Intervals>>;
 
+  using base_t::base_t;
   using base_t::dimension;
   using base_t::operator=;
 
@@ -60,7 +70,7 @@ public:
   // ----------------------------
   static constexpr std::array<double, NumPoints> gl_points =
       manifolds::collocation::detail::compute_glp<NumPoints>();
-  static constexpr std::array<double, NumPoints> g_weights =
+  static constexpr std::array<double, NumPoints> gl_weights =
       manifolds::collocation::detail::compute_glw<NumPoints>();
   static constexpr std::array<double, NumPoints> barycentric_weights =
       manifolds::collocation::detail::barycentric_weights<NumPoints>(
@@ -69,9 +79,14 @@ public:
   // ----------------------------
   // ------ Live Cycle ---------------
   // ----------------------------
-  PWGLVPolynomial() : base_t(), domain_partition_() {}
 
-  PWGLVPolynomial(const Interval &_domain)
+  PWGLVPolynomial() : base_t(), domain_partition_() {
+
+    printf("QQdimension of PWGLVPolynomial %li ----------------\n",
+           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension);
+  }
+
+  PWGLVPolynomial(const IntervalPartition<Intervals> &_domain)
       : base_t(), domain_partition_(_domain) {}
 
   PWGLVPolynomial(const Interval &_domain,
@@ -82,8 +97,11 @@ public:
   PWGLVPolynomial(PWGLVPolynomial &&) = default;
 
   const PWGLVPolynomial &operator=(const PWGLVPolynomial &that) {
-    domain_partition_ = that.domain_partition_;
     base_t::operator=(that);
+    return *this;
+  }
+  const PWGLVPolynomial &operator=(PWGLVPolynomial &&that) {
+    base_t::operator=(std::move(that));
     return *this;
   }
 
@@ -301,9 +319,11 @@ public:
   // ---------------------------------------
 
   static PWGLVPolynomial
-  constant(const Interval &_interval,
+  constant(const IntervalPartition<Intervals> &_interval,
            const Eigen::Vector<double, CoDomainDim> &_vals) {
 
+    printf("Constant dimension of PWGLVPolynomial %li ----------------\n",
+           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension);
     PWGLVPolynomial result(_interval);
 
     for (std::size_t i = 0; i < result.size(); i++) {
@@ -313,9 +333,17 @@ public:
     return result;
   }
 
+  static PWGLVPolynomial zero(const IntervalPartition<Intervals> &_interval) {
+
+    PWGLVPolynomial result(_interval);
+
+    result.repr() = PWGLVPolynomial::Representation::Zero();
+
+    return result;
+  }
   template <bool F = CoDomainDim == 1>
   static std::enable_if_t<F, PWGLVPolynomial>
-  identity(const Interval &_interval) {
+  identity(const IntervalPartition<Intervals> &_interval) {
 
     PWGLVPolynomial result(_interval);
 
@@ -325,6 +353,178 @@ public:
     }
 
     return result;
+  }
+
+  // ---------------------------------------
+  // ------ Continuity matrix ---------------
+  // ---------------------------------------
+  static Eigen::SparseMatrix<double, Eigen::RowMajor>
+  continuity_matrix(std::size_t deg) {
+
+    Eigen::SparseMatrix<double, Eigen::RowMajor> result(
+        (deg + 1) * CoDomainDim * (Intervals - 1), dimension);
+    result.reserve(Eigen::VectorXi::Constant(dimension, 2 * NumPoints));
+    // 0-continuity
+    for (std::size_t k = 0; k < Intervals - 1; k++) {
+      std::size_t j_lhs =
+          k * CoDomainDim * NumPoints + CoDomainDim * (NumPoints - 1);
+      std::size_t j_rhs = (k + 1) * CoDomainDim * NumPoints;
+      for (std::size_t i = 0; i < CoDomainDim; i++) {
+        result.coeffRef(k * CoDomainDim + i, j_lhs + i) = 1.0;
+        result.coeffRef(k * CoDomainDim + i, j_rhs + i) = -1.0;
+      }
+    }
+    if (deg == 0)
+      return result;
+    // 1-continuity
+    static const Eigen::Matrix<double, NumPoints, NumPoints> dmat1 =
+        PWGLVPolynomial<NumPoints, Intervals,
+                        CoDomainDim>::template derivative_matrix_order_m<1>();
+
+    for (std::size_t k = 0; k < Intervals - 1; k++) {
+      std::size_t j_lhs = k * CoDomainDim * NumPoints;
+      std::size_t j_rhs = (k + 1) * CoDomainDim * NumPoints;
+      for (std::size_t point_block = 0; point_block < NumPoints;
+           point_block++) {
+        for (std::size_t i = 0; i < CoDomainDim; i++) {
+          long lhs_row = (Intervals - 1) * CoDomainDim + k * CoDomainDim + i;
+          long rhs_row = (Intervals - 1) * CoDomainDim + k * CoDomainDim + i;
+
+          long rhs_col = j_rhs + point_block * CoDomainDim + i;
+          long lhs_col = j_lhs + point_block * CoDomainDim + i;
+          result.coeffRef(lhs_row, lhs_col) = dmat1(NumPoints - 1, point_block);
+          result.coeffRef(rhs_row, rhs_col) = -dmat1(0, point_block);
+        }
+      }
+    }
+
+    if (deg == 1)
+      return result;
+    // 2-cotinuty
+    static const Eigen::Matrix<double, NumPoints, NumPoints> dmat2 =
+        PWGLVPolynomial<NumPoints, Intervals,
+                        CoDomainDim>::template derivative_matrix_order_m<2>();
+
+    for (std::size_t k = 0; k < Intervals - 1; k++) {
+      std::size_t j_lhs = k * CoDomainDim * NumPoints;
+      std::size_t j_rhs = (k + 1) * CoDomainDim * NumPoints;
+      for (std::size_t point_block = 0; point_block < NumPoints;
+           point_block++) {
+        for (std::size_t i = 0; i < CoDomainDim; i++) {
+          long lhs_row =
+              2 * (Intervals - 1) * CoDomainDim + k * CoDomainDim + i;
+          long rhs_row =
+              2 * (Intervals - 1) * CoDomainDim + k * CoDomainDim + i;
+
+          long rhs_col = j_rhs + point_block * CoDomainDim + i;
+          long lhs_col = j_lhs + point_block * CoDomainDim + i;
+          result.coeffRef(lhs_row, lhs_col) = dmat2(NumPoints - 1, point_block);
+          result.coeffRef(rhs_row, rhs_col) = -dmat2(0, point_block);
+        }
+      }
+    }
+    // Eigen::IOFormat format(3, 0, ", ", ";\n", "", "", "[", "]");
+    // std::cout << result.toDense().format(format) << "\n---\n\n\n";
+    // std::cout << dmat1.format(format) << "\n---\n";
+    if (deg > 2)
+      throw std::invalid_argument("Continuoty matrix not implemented");
+    return result;
+  }
+};
+
+/** K-times continuosy Piece-wise Gauss Lobatto polynomial with fixed end poitns
+ * NumPoints: number of gauss-lobato points
+ * Intervals: number of intervals
+ * DomainDim: Dimpension of the values of the pol
+ * */
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
+          std::size_t ContDeg, bool FixedStartPoint = false,
+          bool FixedEndPoint = false>
+class CPWGLWPolynomial
+    : public LinearManifoldInheritanceHelper<
+          CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
+                           FixedStartPoint, FixedEndPoint>,
+          DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
+                              CoDomainDim *(Intervals - 1) * (ContDeg + 1)>>,
+      public MapInheritanceHelper<
+          CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg>,
+          Map<Reals, DenseLinearManifold<CoDomainDim>>, MatrixTypeId::Dense> {
+
+private:
+  mutable std::array<double, NumPoints> evaluation_buffer_;
+
+  IntervalPartition<Intervals> domain_partition_;
+
+public:
+  // ----------------------------
+  // ------ Types ---------------
+  // ----------------------------
+  using interval_t = std::pair<double, double>;
+
+  using base_t = LinearManifoldInheritanceHelper<
+      CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
+                       FixedStartPoint, FixedEndPoint>,
+      DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
+                          CoDomainDim *(Intervals - 1) * (ContDeg + 1)>>;
+
+  using base_t::base_t;
+  using base_t::dimension;
+  using base_t::operator=;
+
+  struct point_value_t {
+    long i0;
+    long i1;
+    Eigen::Map<Eigen::Vector<double, CoDomainDim>> value;
+  };
+
+  CPWGLWPolynomial() : base_t(), domain_partition_() {}
+
+  CPWGLWPolynomial(const IntervalPartition<Intervals> &_domain)
+      : base_t(), domain_partition_(_domain) {}
+
+  CPWGLWPolynomial(const Interval &_domain,
+                   const Eigen::Vector<double, dimension> &val)
+      : base_t(val), domain_partition_(_domain) {}
+
+  CPWGLWPolynomial(const CPWGLWPolynomial &) = default;
+  CPWGLWPolynomial(CPWGLWPolynomial &&) = default;
+
+  /// ---------------------------------------------------------
+  /// --------------- Evaluation of the polynomial ------------
+  /// ---------------------------------------------------------
+
+  bool value_on_repr(const double &,
+                     Eigen::Vector<double, CoDomainDim> &) const override {
+
+    return true;
+  }
+
+  virtual bool diff_from_repr(const double &,
+                              Eigen::Ref<Eigen::MatrixXd>) const override {
+
+    return true;
+  }
+
+  static Eigen::SparseMatrix<double, Eigen::RowMajor> canonical_immersion() {
+
+    Eigen::SparseMatrix<double, Eigen::RowMajor> smT =
+        PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::continuity_matrix(
+            ContDeg)
+            .transpose();
+
+    // https://stackoverflow.com/questions/54766392/eigen-obtain-the-kernel-of-a-sparse-matrix
+    Eigen::SparseQR<Eigen::SparseMatrix<double, Eigen::RowMajor>,
+                    Eigen::COLAMDOrdering<int>>
+        solver;
+
+    smT.makeCompressed();
+    solver.compute(smT);
+    Eigen::MatrixXd res =
+        solver.matrixQ() * Eigen::MatrixXd::Identity(solver.matrixQ().rows(),
+                                                     solver.matrixQ().cols())
+                               .rightCols(smT.rows() - solver.rank());
+
+    return res.sparseView();
   }
 };
 
