@@ -190,11 +190,11 @@ public:
         },
         _lhs, _rhs);
 
-    if (lhs_max < _tol or rhs_max < _tol) {
+    if (lhs_max < _tol || rhs_max < _tol) {
       return err < _tol;
     }
 
-    return err / lhs_max < _tol and err / rhs_max < _tol;
+    return err / lhs_max < _tol && err / rhs_max < _tol;
   }
 
   static SparseMatrix get_sparse_random() {

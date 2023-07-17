@@ -173,6 +173,7 @@ public:
   }
 };
 
+template <typename Domain, typename Codomain> class SparseLinearMap;
 template <typename Domain, typename Codomain>
 class DenseLinearMap
     : public LinearManifoldInheritanceHelper<
@@ -187,6 +188,16 @@ class DenseLinearMap
 public:
   using base_t::base_t;
   using base_t::operator=;
+
+  template <typename OtherDomain>
+  DenseLinearMap<Codomain, OtherDomain>
+  compose(const DenseLinearMap<OtherDomain, Codomain> &_in) const {
+    return DenseLinearMap<Codomain, OtherDomain>(base_t::crepr() * _in.crepr());
+  }
+
+  template <typename OtherDomain>
+  DenseLinearMap<Codomain, OtherDomain>
+  compose(const SparseLinearMap<OtherDomain, Codomain> &_in) const;
 };
 
 template <typename Domain, typename Codomain>
@@ -204,7 +215,28 @@ class SparseLinearMap
 public:
   using base_t::base_t;
   using base_t::operator=;
+
+  template <typename OtherDomain>
+  DenseLinearMap<Codomain, OtherDomain>
+  compose(const DenseLinearMap<OtherDomain, Codomain> &_in) const {
+    return DenseLinearMap<Codomain, OtherDomain>(base_t::crepr() * _in.crepr());
+  }
+
+  template <typename OtherDomain>
+  DenseLinearMap<Codomain, OtherDomain>
+  compose(const SparseLinearMap<OtherDomain, Codomain> &_in) const {
+    return SparseLinearMap<Codomain, OtherDomain>(base_t::crepr() *
+                                                  _in.crepr());
+  }
 };
+
+template <typename Domain, typename Codomain>
+template <typename OtherDomain>
+DenseLinearMap<Codomain, OtherDomain> DenseLinearMap<Domain, Codomain>::compose(
+    const SparseLinearMap<OtherDomain, Codomain> &_in) const {
+
+  return DenseLinearMap<Codomain, OtherDomain>(base_t::crepr() * _in.crepr());
+}
 
 using End3 = MixedLinearMap<R3, R3>;
 

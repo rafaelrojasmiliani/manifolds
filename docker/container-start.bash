@@ -27,7 +27,7 @@ main() {
     mygroup=$(id -g -n $USER)
     myuser="$USER"
     image=rafa606/cpp-vim:22.04
-    docker pull $image
+    #docker pull $image
     docker run -it --rm \
         ${DOCKER_VIDEO_OPTIONS} \
         --volume $(pwd)/../:/workspace: \

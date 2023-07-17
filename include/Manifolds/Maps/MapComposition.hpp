@@ -4,34 +4,6 @@
 
 namespace manifolds {
 
-namespace detail_composition {
-
-// -------------------------------------
-/// Diferential type snifae
-// -------------------------------------
-template <bool Val, std::size_t DomainDim, std::size_t CodomainDim>
-struct DT {};
-template <std::size_t DomainDim, std::size_t CodomainDim>
-struct DT<true, DomainDim, CodomainDim> {
-  using Type = Eigen::SparseMatrix<double, Eigen::RowMajor>;
-  using RefType =
-      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
-};
-template <std::size_t DomainDim, std::size_t CodomainDim>
-struct DT<false, DomainDim, CodomainDim> {
-  using Type = Eigen::Matrix<double, CodomainDim, DomainDim>;
-  using RefType = Eigen::Ref<Eigen::MatrixXd>;
-};
-
-template <bool IsDiffSparse, std::size_t DomainDim, std::size_t CodomainDim>
-using DifferentialRepr_t =
-    typename DT<IsDiffSparse, DomainDim, CodomainDim>::Type;
-template <bool IsDiffSparse, std::size_t DomainDim = 0,
-          std::size_t CodomainDim = 0>
-using DifferentialReprRef_t =
-    typename DT<IsDiffSparse, DomainDim, CodomainDim>::RefType;
-
-} // namespace detail_composition
 template <typename DomainType, typename CoDomainType> class Map;
 
 /// Typed composition of maps.
@@ -182,5 +154,4 @@ MapComposition(const T &m)
 template <typename T>
 MapComposition(T &&m)
     -> MapComposition<typename T::domain, typename T::codomain>;
-/// Move-Constructor from a typed map
 } // namespace manifolds

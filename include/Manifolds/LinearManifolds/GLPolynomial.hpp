@@ -18,7 +18,7 @@
 namespace manifolds {
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
           std::size_t ContDeg, bool FixedStartPoint, bool FixedEndPoint>
-class CPWGLWPolynomial;
+class CPWGLVPolynomial;
 
 /** Piece-wise Gauss Lobatto polynomial
  * NumPoints: number of gauss-lobato points
@@ -45,7 +45,7 @@ public:
   // ----------------------------
   template <std::size_t Deg, bool FixedStartPoint = false,
             bool FixedEndPoint = false>
-  using Continuous = CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, Deg,
+  using Continuous = CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, Deg,
                                       FixedStartPoint, FixedEndPoint>;
 
   using interval_t = std::pair<double, double>;
@@ -440,14 +440,16 @@ public:
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
           std::size_t ContDeg, bool FixedStartPoint = false,
           bool FixedEndPoint = false>
-class CPWGLWPolynomial
+class CPWGLVPolynomial
     : public LinearManifoldInheritanceHelper<
-          CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
+          CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                            FixedStartPoint, FixedEndPoint>,
           DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
-                              CoDomainDim *(Intervals - 1) * (ContDeg + 1)>>,
+                              CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
+                              ((FixedEndPoint) ? CoDomainDim : 0) -
+                              ((FixedStartPoint) ? CoDomainDim : 0)>>,
       public MapInheritanceHelper<
-          CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg>,
+          CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg>,
           Map<Reals, DenseLinearManifold<CoDomainDim>>, MatrixTypeId::Dense> {
 
 private:
@@ -462,11 +464,13 @@ public:
   using interval_t = std::pair<double, double>;
 
   using base_t = LinearManifoldInheritanceHelper<
-      CPWGLWPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
+      CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                        FixedStartPoint, FixedEndPoint>,
       DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
-                          CoDomainDim *(Intervals - 1) * (ContDeg + 1)>>;
-
+                          CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
+                          ((FixedEndPoint) ? CoDomainDim : 0) -
+                          ((FixedStartPoint) ? CoDomainDim : 0)>>;
+  ;
   using base_t::base_t;
   using base_t::dimension;
   using base_t::operator=;
@@ -477,17 +481,17 @@ public:
     Eigen::Map<Eigen::Vector<double, CoDomainDim>> value;
   };
 
-  CPWGLWPolynomial() : base_t(), domain_partition_() {}
+  CPWGLVPolynomial() : base_t(), domain_partition_() {}
 
-  CPWGLWPolynomial(const IntervalPartition<Intervals> &_domain)
+  CPWGLVPolynomial(const IntervalPartition<Intervals> &_domain)
       : base_t(), domain_partition_(_domain) {}
 
-  CPWGLWPolynomial(const Interval &_domain,
+  CPWGLVPolynomial(const Interval &_domain,
                    const Eigen::Vector<double, dimension> &val)
       : base_t(val), domain_partition_(_domain) {}
 
-  CPWGLWPolynomial(const CPWGLWPolynomial &) = default;
-  CPWGLWPolynomial(CPWGLWPolynomial &&) = default;
+  CPWGLVPolynomial(const CPWGLVPolynomial &) = default;
+  CPWGLVPolynomial(CPWGLVPolynomial &&) = default;
 
   /// ---------------------------------------------------------
   /// --------------- Evaluation of the polynomial ------------
@@ -526,6 +530,17 @@ public:
 
     return res.sparseView();
   }
+
+  static Eigen::SparseMatrix<double, Eigen::RowMajor> euclidean_projector() {
+    Eigen::SparseMatrix<double, Eigen::RowMajor> ci = canonical_immersion();
+    Eigen::SparseMatrix<double, Eigen::RowMajor> result = ci * ci.transpose();
+    return result;
+  }
+
+  class Immersion;
+  class EuclideanProjection;
+
+  class ContinuityError;
 };
 
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>

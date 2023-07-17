@@ -11,37 +11,9 @@
 #include <memory>
 
 namespace manifolds {
-namespace detail {
-
-// -------------------------------------
-/// Diferential type snifae
-// -------------------------------------
-template <bool Val, std::size_t DomainDim, std::size_t CodomainDim>
-struct DT {};
-template <std::size_t DomainDim, std::size_t CodomainDim>
-struct DT<true, DomainDim, CodomainDim> {
-  using Type = Eigen::SparseMatrix<double, Eigen::RowMajor>;
-  using RefType =
-      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
-};
-template <std::size_t DomainDim, std::size_t CodomainDim>
-struct DT<false, DomainDim, CodomainDim> {
-  using Type = Eigen::Matrix<double, CodomainDim, DomainDim>;
-  using RefType = Eigen::Ref<Eigen::MatrixXd>;
-};
-
-template <bool IsDiffSparse, std::size_t DomainDim, std::size_t CodomainDim>
-using DifferentialRepr_t =
-    typename DT<IsDiffSparse, DomainDim, CodomainDim>::Type;
-template <bool IsDiffSparse, std::size_t DomainDim = 0,
-          std::size_t CodomainDim = 0>
-using DifferentialReprRef_t =
-    typename DT<IsDiffSparse, DomainDim, CodomainDim>::RefType;
-
-} // namespace detail
-  //
-  //
-  //
+//
+//
+//
 
 /// Map typed class.
 template <typename DomainType, typename CoDomainType>
@@ -274,7 +246,7 @@ public:
 
 protected:
   /// Implementation of differentiation of for MapBase. This is a
-  /// representaiton-agnostic evaluation.
+  /// representation-agnostic evaluation.
   bool value_impl(const ManifoldBase *_in,
                   ManifoldBase *_other) const override {
 
@@ -283,7 +255,7 @@ protected:
   }
 
   /// Implementation of differentiation of for MapBase. This is a
-  /// representaiton-agnostic evaluation.
+  /// representaton-agnostic evaluation.
   bool diff_impl(const ManifoldBase *_in,
                  DifferentialReprRefType _mat) const override {
     return diff_from_repr(static_cast<const DomainType *>(_in)->crepr(), _mat);
@@ -342,6 +314,8 @@ private:
   }
 
 public:
+  using differential_reference_t = Eigen::Ref<Eigen::MatrixXd>;
+
   virtual bool diff_from_repr(const typename Base::domain::Representation &_in,
                               Eigen::Ref<Eigen::MatrixXd> _mat) const = 0;
 
@@ -362,7 +336,7 @@ public:
   // ---------------------------------
   template <bool F = (not Base::domain::is_faithfull)>
   std::enable_if_t<F, bool> diff(const typename Base::domain &_in,
-                                 Eigen::Ref<Eigen::MatrixXd> _out) const {
+                                 differential_reference_t _out) const {
     return Base::diff_from_repr(_in.crepr(), (Eigen::Ref<Eigen::MatrixXd>)_out);
   }
 
@@ -393,7 +367,7 @@ public:
   }
 };
 
-/// Specialization for sparce matrices
+/// Specialization for sparse matrices
 template <typename Current, typename Base>
 class MapInheritanceHelper<Current, Base, MatrixTypeId::Sparse> : public Base {
   __INHERIT_LIVE_CYCLE(Base)
@@ -408,10 +382,12 @@ private:
   }
 
 public:
-  virtual bool diff_from_repr(
-      const typename Current::DomainType::Representation &_in,
-      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>> _mat)
-      const = 0;
+  using differential_reference_t =
+      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
+  using differential_t = Eigen::SparseMatrix<double, Eigen::RowMajor>;
+  virtual bool
+  diff_from_repr(const typename Current::DomainType::Representation &_in,
+                 differential_reference_t _mat) const = 0;
 
   virtual MatrixTypeId differential_type() const override {
     return MatrixTypeId::Sparse;
@@ -461,4 +437,40 @@ protected:
   }
 };
 
-}; // namespace manifolds
+template <typename Domain, typename Codomain, MatrixTypeId DT>
+
+class MapLifting : public MapInheritanceHelper<MapLifting<Domain, Codomain, DT>,
+                                               Map<Domain, Codomain>, DT> {
+
+public:
+  using base_t = MapInheritanceHelper<MapLifting<Domain, Codomain, DT>,
+                                      Map<Domain, Codomain>, DT>;
+
+  using value_fun_t =
+      std::function<bool(const typename Domain::Representation &,
+                         typename Codomain::Representation &)>;
+  using diff_fun_t =
+      std::function<bool(const typename Domain::Representation &,
+                         typename base_t::differential_reference_t)>;
+  MapLifting(const value_fun_t &_value_fun, const diff_fun_t &_diff_fun)
+      : base_t(), value_fun_(_value_fun), diff_fun_(_diff_fun) {}
+
+  bool
+  value_on_repr(const typename Domain::Representation &_in,
+                typename Codomain::Representation &_result) const override {
+
+    return value_fun_(_in, _result);
+  }
+
+  bool diff_from_repr(
+      const typename Domain::Representation &_in,
+      typename base_t::differential_reference_t _mat) const override {
+    return diff_fun_(_in, _mat);
+  }
+
+private:
+  value_fun_t value_fun_;
+  diff_fun_t diff_fun_;
+};
+
+} // namespace manifolds
