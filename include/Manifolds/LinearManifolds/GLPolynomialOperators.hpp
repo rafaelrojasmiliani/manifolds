@@ -8,13 +8,13 @@ namespace manifolds {
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 template <std::size_t Deg>
 class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Derivative
-    : public LinearMapInheritanceHelper<
+    : public detail::Clonable<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Derivative<Deg>,
           SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
                           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>>> {
 
 public:
-  using base_t = LinearMapInheritanceHelper<
+  using base_t = detail::Clonable<
       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Derivative<Deg>,
       SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
                       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>>>;
@@ -46,7 +46,7 @@ private:
     // SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>
     // Is the same of this->dimension. WHY!??
     Eigen::SparseMatrix<double, Eigen::RowMajor> result(
-        base_t::codomain::dimension, base_t::domain::dimension);
+        base_t::codomain_t::dimension, base_t::domain_t::dimension);
 
     /*
     for (std::size_t k = 0; k < base_t::domain_dimension; k += NumPoints) {
@@ -105,11 +105,11 @@ PWGLVPolynomialSpace<NumPoints, Intervals, CoDomainDim>::derivative() {
 
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Integral
-    : public LinearMapInheritanceHelper<
+    : public detail::Clonable<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Integral,
           DenseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
                          Reals>> {
-  using base_t = LinearMapInheritanceHelper<
+  using base_t = detail::Clonable<
       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Integral,
       DenseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
                      Reals>>;
@@ -130,12 +130,12 @@ class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Integral
 
 private:
   IntervalPartition<Intervals> domain_partition_;
-  static Eigen::Matrix<double, 1, base_t::domain::dimension> get() {
-    Eigen::Matrix<double, 1, base_t::domain::dimension> result;
+  static Eigen::Matrix<double, 1, base_t::domain_t::dimension> get() {
+    Eigen::Matrix<double, 1, base_t::domain_t::dimension> result;
     for (std::size_t k = 0; k < Intervals; k += 1) {
       auto &interval_block = result.block(k * NumPoints, 0, 1, NumPoints);
       interval_block = Eigen::Map<decltype(result)>(
-          result.base_t::domain::gl_weights.data());
+          result.base_t::domain_t::gl_weights.data());
     }
   }
 };
@@ -144,7 +144,7 @@ template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
           std::size_t ContDeg, bool FixedStartPoint, bool FixedEndPoint>
 class CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                        FixedStartPoint, FixedEndPoint>::ContinuityError
-    : public LinearMapInheritanceHelper<
+    : public detail::Clonable<
           CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                            FixedStartPoint, FixedEndPoint>::ContinuityError,
           SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
@@ -153,7 +153,7 @@ private:
   IntervalPartition<Intervals> domain_partition_;
 
 public:
-  using base_t = LinearMapInheritanceHelper<
+  using base_t = detail::Clonable<
       CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                        FixedStartPoint, FixedEndPoint>::ContinuityError,
       SparseLinearMap<
@@ -163,7 +163,7 @@ public:
   ContinuityError(const IntervalPartition<Intervals> &_partition)
       : base_t(), domain_partition_(_partition) {
 
-    static auto matrix = base_t::domain::continuity_matrix(ContDeg);
+    static auto matrix = base_t::domain_t::continuity_matrix(ContDeg);
 
     this->repr() = matrix;
 
@@ -195,7 +195,7 @@ template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
           std::size_t ContDeg, bool FixedStartPoint, bool FixedEndPoint>
 class CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                        FixedStartPoint, FixedEndPoint>::Immersion
-    : public LinearMapInheritanceHelper<
+    : public detail::Clonable<
           CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                            FixedStartPoint, FixedEndPoint>::Immersion,
           SparseLinearMap<
@@ -206,7 +206,7 @@ private:
   IntervalPartition<Intervals> domain_partition_;
 
 public:
-  using base_t = LinearMapInheritanceHelper<
+  using base_t = detail::Clonable<
       CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                        FixedStartPoint, FixedEndPoint>::Immersion,
       SparseLinearMap<CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim,
@@ -216,7 +216,7 @@ public:
   Immersion(const IntervalPartition<Intervals> &_partition)
       : base_t(), domain_partition_(_partition) {
 
-    static auto matrix = base_t::codomain::continuity_matrix(ContDeg);
+    static auto matrix = base_t::codomain_t::continuity_matrix(ContDeg);
 
     auto current_matrix = matrix;
 
@@ -261,19 +261,20 @@ public:
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 template <typename OtherCoDomain>
 class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Composition
-    : public MapInheritanceHelper<
+    : public detail::Clonable<
           PWGLVPolynomial<NumPoints, Intervals,
                           CoDomainDim>::Composition<OtherCoDomain>,
           Map<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-              PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension>>,
-          MatrixTypeId::Sparse> {
+              PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension>,
+              detail::MatrixTypeId::Sparse>> {
 public:
-  using base_t = MapInheritanceHelper<
+  using base_t = detail::Clonable<
       PWGLVPolynomial<NumPoints, Intervals,
                       CoDomainDim>::Composition<OtherCoDomain>,
       Map<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-          PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension>>,
-      MatrixTypeId::Sparse>;
+          PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension>,
+          detail::MatrixTypeId::Sparse>>;
+
   using value_fun_t = std::function<bool(
       const typename DenseLinearManifold<CoDomainDim>::Representation &,
       typename OtherCoDomain::Representation &)>;
@@ -286,16 +287,14 @@ public:
 
   Composition(const value_fun_t &_value_fun, const diff_fun_t &_diff_fun)
       : base_t(),
-        map_(std::make_unique<MapLifting<DenseLinearManifold<CoDomainDim>,
-                                         OtherCoDomain, MatrixTypeId::Dense>>(
-            _value_fun, _diff_fun)) {}
+        map_(std::make_unique<
+             MapLifting<DenseLinearManifold<CoDomainDim>, OtherCoDomain,
+                        detail::MatrixTypeId::Dense>>(_value_fun, _diff_fun)) {}
 
-  bool value_on_repr(
-      const typename PWGLVPolynomial<NumPoints, Intervals,
-                                     CoDomainDim>::Representation &in,
-      typename PWGLVPolynomial<NumPoints, Intervals,
-                               OtherCoDomain::dimension>::Representation &out)
-      const override {
+  bool
+  value_on_repr(const PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> &in,
+                PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension>
+                    &out) const override {
 
     for (std::size_t point_index = 0; point_index < in.size(); point_index++) {
       map_->value(in[point_index], out[point_index]);
@@ -304,8 +303,7 @@ public:
   }
 
   virtual bool diff_from_repr(
-      const typename PWGLVPolynomial<NumPoints, Intervals,
-                                     CoDomainDim>::Representation &in,
+      const PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> &in,
       std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>> _mat)
       const override {
 

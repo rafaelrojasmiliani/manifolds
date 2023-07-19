@@ -13,30 +13,21 @@
 
 using namespace manifolds;
 
-TEST(MixedMatrixManifolds, Dense) {
-  using T = MixedMatrixManifold<3, 1>;
-  TestManifoldFaithfull<T>();
-}
-
-TEST(MixedMatrixManifolds, Sparse) {
-  using T = MixedMatrixManifold<300, 1>;
-  TestManifoldFaithfull<T>();
-}
-
 TEST(DenseMatrixManifolds, Test) {
   using T = DenseMatrixManifold<3, 1>;
-  TestManifoldFaithfull<T>();
+  TestManifoldFaithful<T>();
 }
 
 TEST(SparseMatrixManifold, Test) {
   using T = SparseMatrixManifold<50, 100>;
-  TestManifoldFaithfull<T>();
+  TestManifoldFaithful<T>();
 }
 
 TEST(Reals, Test) {
   using T = Reals;
-  TestManifoldFaithfull<T>();
+  TestManifoldFaithful<T>();
 }
+/*
 TEST(DenseMatrixManifold, Lifting) {
 
   auto value = [](const R3::Representation &_in, double &_out) -> bool {
@@ -50,6 +41,7 @@ TEST(DenseMatrixManifold, Lifting) {
   };
   auto norm = MapLifting<R3, Reals, MatrixTypeId::Dense>(value, diff);
 }
+*/
 /*
 TEST(Lifting, Test) {
   using T1 = R3;

@@ -77,28 +77,40 @@ namespace manifolds {
 /* }; */
 
 class Interval
-    : public ManifoldInheritanceHelper<Interval,
-                                       DenseRealTuplesBase<2, 1, false>> {
+    : public detail::Clonable<Interval, DenseMatrixManifold<2, 1, false>> {
 
   template <std::size_t NumberOfIntervals> friend class IntervalPartition;
 
 public:
-  using base_t =
-      ManifoldInheritanceHelper<Interval, DenseRealTuplesBase<2, 1, false>>;
+  using base_t = detail::Clonable<Interval, DenseMatrixManifold<2, 1, false>>;
   using base_t::base_t;
 
-  Interval(const std::initializer_list<double> _pair)
-      : base_t(Eigen::Vector2d({_pair})) {
-    if (_pair.size() != 2)
-      throw std::logic_error("");
+  static Interval random() {
+    Eigen::Vector2d val = Eigen::Vector2d::Random();
+    val(1) = val(0) + val(1);
+    return Interval(val);
+  }
+  static Interval from_repr(const Eigen::Vector2d &val) {
+    if (val(1) < val(0))
+      throw std::invalid_argument("invalid interval");
+    return Interval(val);
+  }
+  static Interval from_repr(Eigen::Vector2d &&val) {
+    if (val(1) < val(0))
+      throw std::invalid_argument("invalid interval");
+    return Interval(std::move(val));
+  }
+
+  Interval(double a, double b) : base_t(Eigen::Vector2d({a, b})) {
+    if (b < a)
+      throw std::invalid_argument("invalid interval");
   }
 
   Interval(const Interval &) = default;
+  Interval(Interval &&) = default;
+  Interval &operator=(const Interval &) = default;
+  Interval &operator=(Interval &&) = default;
 
-  Interval &operator=(const std::pair<double, double> &_pair) {
-    this->repr() = Eigen::Vector2d({_pair.first, _pair.second});
-    return *this;
-  }
   double length() const {
     const auto &vec = this->crepr();
     return vec(1) - vec(0);
@@ -129,13 +141,13 @@ public:
 
 template <std::size_t NumberOfIntervals>
 class IntervalPartition
-    : public ManifoldInheritanceHelper<
+    : public detail::Clonable<
           IntervalPartition<NumberOfIntervals>,
-          DenseRealTuplesBase<NumberOfIntervals, 1, false>> {
+          DenseMatrixManifold<NumberOfIntervals, 1, false>> {
 public:
-  using base_t = ManifoldInheritanceHelper<
-      IntervalPartition<NumberOfIntervals>,
-      DenseRealTuplesBase<NumberOfIntervals, 1, false>>;
+  using base_t =
+      detail::Clonable<IntervalPartition<NumberOfIntervals>,
+                       DenseMatrixManifold<NumberOfIntervals, 1, false>>;
 
   using base_t::base_t;
 
@@ -145,8 +157,7 @@ public:
       : base_t(), interval_(_interval) {
     this->repr() = in;
   }
-  IntervalPartition(const std::initializer_list<double> _pair)
-      : base_t(), interval_(Eigen::Vector2d({_pair})) {
+  IntervalPartition(double a, double b) : base_t(), interval_(a, b) {
     this->repr().array() = interval_.length() / NumberOfIntervals;
   }
 
@@ -161,6 +172,10 @@ public:
     this->repr() = in;
     return *this;
   }
+  IntervalPartition(const IntervalPartition &) = default;
+  IntervalPartition(IntervalPartition &&) = default;
+  IntervalPartition &operator=(const IntervalPartition &) = default;
+  IntervalPartition &operator=(IntervalPartition &&) = default;
 
   std::size_t subinterval_index(double val) const {
     double t0 = interval_.first();
@@ -172,7 +187,12 @@ public:
         return i;
       t0 = t1;
     }
-    throw std::invalid_argument("outside interval");
+    throw std::invalid_argument("outside interval \n interval is [" +
+                                std::to_string(interval_.first()) + ", " +
+                                std::to_string(interval_.second()) +
+                                "] \n"
+                                "and value is" +
+                                std::to_string(val));
   }
 
   std::tuple<std::size_t, double>
@@ -188,7 +208,12 @@ public:
       }
       t0 = t1;
     }
-    throw std::invalid_argument("outside interval");
+    throw std::invalid_argument("outside interval \n interval is [" +
+                                std::to_string(interval_.first()) + ", " +
+                                std::to_string(interval_.second()) +
+                                "] \n"
+                                "and value is" +
+                                std::to_string(val));
   }
 
   double subinterval_length(std::size_t indx) const {

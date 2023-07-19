@@ -64,9 +64,9 @@ template <typename T> struct TestManifold {
   }
 };
 
-template <typename T> struct TestManifoldFaithfull : public TestManifold<T> {
+template <typename T> struct TestManifoldFaithful : public TestManifold<T> {
 
-  TestManifoldFaithfull() : TestManifold<T>() {
+  TestManifoldFaithful() : TestManifold<T>() {
 
     T manifold = T::random_projection();
 
@@ -105,10 +105,12 @@ template <typename T> struct TestManifoldFaithfull : public TestManifold<T> {
 };
 
 template <typename T> struct TestMap {
+  using domain_t = typename T::domain_t;
+  using codomain_t = typename T::codomain_t;
   TestMap() {
-    typename T::domain domain_value = T::domain::random_projection();
-    typename T::codomain codomain_value_a = T::codomain::random_projection();
-    typename T::codomain codomain_value_b = T::codomain::random_projection();
+    domain_t domain_value = domain_t::random_projection();
+    codomain_t codomain_value_a = codomain_t::random_projection();
+    codomain_t codomain_value_b = codomain_t::random_projection();
 
     T current_map;
 
@@ -132,15 +134,16 @@ template <typename T> struct TestMap {
     std::unique_ptr<MapBase> cloned_base = _base.clone();
 
     // Test getters, dimension and tangent representation dimension
-    EXPECT_TRUE(cloned_base->get_codom_dim() == T::codomain::dimension);
+    EXPECT_TRUE(cloned_base->get_codom_dim() == T::codomain_t::dimension);
     EXPECT_TRUE(cloned_base->get_codom_tangent_repr_dim() ==
-                T::codomain::tangent_repr_dimension);
-    EXPECT_TRUE(cloned_base->get_dom_dim() == T::domain::dimension);
+                T::codomain_t::tangent_repr_dimension);
+    EXPECT_TRUE(cloned_base->get_dom_dim() == T::domain_t::dimension);
     EXPECT_TRUE(cloned_base->get_dom_tangent_repr_dim() ==
-                T::domain::tangent_repr_dimension);
+                T::domain_t::tangent_repr_dimension);
 
-    typename T::domain domain_value = T::domain::random_projection();
-    typename T::codomain codomain_value_a = T::codomain::random_projection();
+    typename T::domain_t domain_value = T::domain_t::random_projection();
+    typename T::codomain_t codomain_value_a =
+        T::codomain_t::random_projection();
 
     original(domain_value, codomain_value_a);
     auto codomain_value_b = cloned_base->value(domain_value.clone());

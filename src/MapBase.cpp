@@ -24,7 +24,7 @@ std::unique_ptr<MapBase> MapBase::move_clone() {
 }
 
 bool MapBase::diff(const std::unique_ptr<ManifoldBase> &_in,
-                   DifferentialReprRefType _mat) const {
+                   detail::mixed_matrix_ref_t _mat) const {
   return diff_impl(_in.get(), _mat);
 }
 

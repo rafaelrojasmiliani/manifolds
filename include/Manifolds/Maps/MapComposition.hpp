@@ -4,7 +4,9 @@
 
 namespace manifolds {
 
-template <typename DomainType, typename CoDomainType> class Map;
+template <typename DomainType, typename CoDomainType,
+          detail::MatrixTypeId DT = detail::MatrixTypeId::Dense>
+class Map;
 
 /// Typed composition of maps.
 template <typename DomainType, typename CoDomainType>
@@ -117,7 +119,7 @@ protected:
     return MapBaseComposition::value_impl(_in, _other);
   }
   bool diff_impl(const ManifoldBase *_in,
-                 DifferentialReprRefType _mat) const override {
+                 detail::mixed_matrix_ref_t _mat) const override {
     return MapBaseComposition::diff_impl(_in, _mat);
   }
   virtual MapComposition *clone_impl() const override {
@@ -127,17 +129,14 @@ protected:
   virtual MapComposition *move_clone_impl() override {
     return new MapComposition(std::move(*(this)));
   }
-  virtual bool
-  value_on_repr(const typename DomainType::Representation &_in,
-                typename CoDomainType::Representation &_result) const override {
+  virtual bool value_on_repr(const DomainType &_in,
+                             CoDomainType &_result) const override {
     static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
     static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
-    DomainType m1 = DomainType::CRef(&_in);
-    CoDomainType m2 = CoDomainType::Ref(&_result);
-    return value_impl(&m1, &m2);
+    return value_impl(&_in, &_result);
   }
   virtual bool diff_from_repr(const typename DomainType::Representation &_in,
-                              DifferentialReprRefType _mat) const override {
+                              detail::mixed_matrix_ref_t _mat) const override {
     DomainType m1 = DomainType::CRef(_in);
     return diff_impl(&m1, _mat);
   }

@@ -4,9 +4,31 @@
 #include <functional>
 #include <memory>
 #include <variant>
+namespace manifolds {
+namespace detail {
 
+template <typename Base, typename... Args> struct inherits_from;
+
+template <typename Base, typename Arg, typename... Rest>
+struct inherits_from<Base, Arg, Rest...> {
+  using type = std::conditional_t<std::is_base_of_v<Base, Arg>, Arg,
+                                  typename inherits_from<Base, Rest...>::type>;
+  static constexpr bool value =
+      std::is_base_of_v<Base, Arg> || inherits_from<Base, Rest...>::value;
+};
+
+template <typename Base> struct inherits_from<Base> {
+  using type = void;
+  static constexpr bool value = false;
+};
+
+template <typename Base, typename... Args>
+using inherits_from_t = typename inherits_from<Base, Args...>::type;
+
+template <typename Base, typename... Args>
+inline constexpr bool inherits_from_v = inherits_from<Base, Args...>::value;
 struct DifferentialRepresentation {
-  enum { dense = 0, sparse, mixed };
+  enum { dense = 0, sparse };
 };
 
 template <long Rows, long Cols>
@@ -14,35 +36,32 @@ using DenseMatrix =
     Eigen::Matrix<double, (Rows * Cols < 20000) ? Rows : Eigen::Dynamic,
                   (Rows * Cols < 20000) ? Cols : Eigen::Dynamic>;
 
-using DenseMatrixRef = Eigen::Ref<Eigen::MatrixXd>;
+using dense_matrix_ref_t = Eigen::Ref<Eigen::MatrixXd>;
 
-using DenseMatrixConstRef = Eigen::Ref<const Eigen::MatrixXd>;
+template <long Rows = Eigen::Dynamic, long Cols = Eigen::Dynamic>
+using dense_matrix_t = Eigen::Matrix<double, Rows, Cols>;
 
-using SparseMatrix = Eigen::SparseMatrix<double, Eigen::RowMajor>;
+using dense_matrix_const_ref_t = Eigen::Ref<const Eigen::MatrixXd>;
 
-using SparseMatrixRef =
-    std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>;
+using sparse_matrix_t = Eigen::SparseMatrix<double, Eigen::RowMajor>;
 
-using SparseMatrixConstRef =
-    std::reference_wrapper<const Eigen::SparseMatrix<double, Eigen::RowMajor>>;
+using sparse_matrix_ref_t = std::reference_wrapper<sparse_matrix_t>;
 
 template <long Rows, long Cols>
-using MixedMatrix = std::variant<Eigen::Matrix<double, Rows, Cols>,
-                                 Eigen::SparseMatrix<double, Eigen::RowMajor>>;
+using MixedMatrix =
+    std::variant<Eigen::Matrix<double, Rows, Cols>, sparse_matrix_t>;
 
-using MixedMatrixRef = std::variant<DenseMatrixRef, SparseMatrixRef>;
-
-using MixedMatrixConstRef =
-    std::variant<DenseMatrixConstRef, SparseMatrixConstRef>;
+using mixed_matrix_ref_t =
+    std::variant<dense_matrix_ref_t, sparse_matrix_ref_t>;
 
 using DifferentialReprRefType = std::variant<
     Eigen::Ref<Eigen::MatrixXd>,
     std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>>;
 
-using DifferentialReprType =
+using mixed_matrix_t =
     std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 
-enum MatrixTypeId { Dense = 0, Sparse, Mixed };
+enum MatrixTypeId { Dense = 0, Sparse };
 
 #define __INHERIT_LIVE_CYCLE(B)                                                \
 public:                                                                        \
@@ -97,3 +116,82 @@ public:                                                                        \
 #define THROW_OUTSIDE_DOMAIN                                                   \
   trow std::logic_error(                                                       \
       "The function is a partial function. You cannot introduce any values");
+
+template <typename Current, typename... Bases>
+class Clonable : public Bases... {
+public:
+  using Bases::Bases...;
+  using Bases::operator=...;
+  __DEFAULT_LIVE_CYCLE(Clonable)
+public:
+  std::unique_ptr<Current> clone() const {
+    return std::unique_ptr<Current>(static_cast<Current *>(this->clone_impl()));
+  }
+  std::unique_ptr<Current> move_clone() {
+    return std::unique_ptr<Current>(static_cast<Current *>(move_clone_impl()));
+  }
+
+  template <bool B = inherits_from_v<ManifoldBase, Bases...>,
+            typename T = inherits_from_t<ManifoldBase, Bases...>>
+  static std::enable_if_t<B, std::unique_ptr<Current>>
+  from_repr(const typename T::Representation &_in) {
+    return std::unique_ptr<Current>(new Current(_in));
+  }
+  template <bool B = inherits_from_v<ManifoldBase, Bases...>,
+            typename T = inherits_from_t<ManifoldBase, Bases...>>
+  static std::enable_if_t<B, std::unique_ptr<Current>>
+  from_repr(typename T::Representation &&_in) {
+    return std::unique_ptr<Current>(new Current(std::move(_in)));
+  }
+  /* template <typename T = inherits_from_t<ManifoldBase, Bases...>, */
+  /*           typename = std::enable_if<inherits_from_v<ManifoldBase,
+   * Bases...>>> */
+  template <bool B = inherits_from_v<ManifoldBase, Bases...>,
+            typename T = inherits_from_t<ManifoldBase, Bases...>>
+  static std::enable_if_t<B, std::unique_ptr<Current>> random() {
+    return std::unique_ptr<Current>(new Current(T::atlas::random_projection()));
+  }
+
+private:
+  virtual Clonable *clone_impl() const override {
+    static_assert((std::is_base_of_v<Clonable, Current>),
+                  "Clonable inheritance ERROR. Declared base is not a base");
+    return new Current(static_cast<const Current &>(*this));
+  }
+  virtual Clonable *move_clone_impl() override {
+    static_assert(std::is_base_of_v<Clonable, Current>,
+                  "Clonable inheritance ERROR. Declared base is not a base");
+    return new Current(static_cast<Current &&>(std::move(*this)));
+  }
+};
+
+template <typename Current, typename... Bases>
+class ClonableManifold : public Bases... {
+public:
+  using Bases::Bases...;
+  using Bases::operator=...;
+  __DEFAULT_LIVE_CYCLE(ClonableManifold)
+public:
+  std::unique_ptr<Current> clone() const {
+    return std::unique_ptr<Current>(static_cast<Current *>(this->clone_impl()));
+  }
+  std::unique_ptr<Current> move_clone() {
+    return std::unique_ptr<Current>(static_cast<Current *>(move_clone_impl()));
+  }
+
+private:
+  virtual ClonableManifold *clone_impl() const override {
+    static_assert(
+        (std::is_base_of_v<ClonableManifold, Current>),
+        "ClonableManifold inheritance ERROR. Declared base is not a base");
+    return new Current(static_cast<const Current &>(*this));
+  }
+  virtual ClonableManifold *move_clone_impl() override {
+    static_assert(
+        std::is_base_of_v<ClonableManifold, Current>,
+        "ClonableManifold inheritance ERROR. Declared base is not a base");
+    return new Current(static_cast<Current &&>(std::move(*this)));
+  }
+};
+} // namespace detail
+} // namespace manifolds

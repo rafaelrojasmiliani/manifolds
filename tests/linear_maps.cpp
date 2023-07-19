@@ -2,19 +2,17 @@
 #include "Test.h"
 #include <Eigen/Core>
 #include <Manifolds/LinearManifolds/LinearMaps.hpp>
-#include <Manifolds/Maps/Map.hpp>
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
 
 using namespace manifolds;
-
 /// Test properties of LinearMaps
-TEST(MixedLinearMaps, AsDenseLinearManifold) {
+TEST(LinearMaps, DenseLinearMaps) {
 
-  using T = MixedLinearMap<MixedLinearManifold<20>, MixedLinearManifold<10>>;
-  TestManifoldFaithfull<T>();
+  using T = DenseLinearMap<DenseLinearManifold<20>, DenseLinearManifold<10>>;
+  TestManifoldFaithful<T>();
   TestMap<T>();
 }
 

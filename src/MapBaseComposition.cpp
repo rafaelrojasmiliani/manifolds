@@ -238,7 +238,7 @@ bool MapBaseComposition::value_impl(const ManifoldBase *_in,
 //                                          \----------v----------/
 //                                          matrix_result_buffers_[n-3]
 bool MapBaseComposition::diff_impl(const ManifoldBase *_in,
-                                   DifferentialReprRefType _mat) const {
+                                   detail::mixed_matrix_ref_t _mat) const {
   auto map_it = maps_.end();
   auto codomain_it = codomain_buffers_.end();
   auto matrix_it = matrix_buffers_.end();

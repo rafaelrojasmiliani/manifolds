@@ -27,12 +27,10 @@ class CPWGLVPolynomial;
  * */
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 class PWGLVPolynomial
-    : public LinearManifoldInheritanceHelper<
+    : public detail::Clonable<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-          DenseLinearManifold<NumPoints * CoDomainDim * Intervals>>,
-      public MapInheritanceHelper<
-          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-          Map<Reals, DenseLinearManifold<CoDomainDim>>, MatrixTypeId::Dense> {
+          DenseLinearManifold<NumPoints * CoDomainDim * Intervals, false>,
+          Map<Reals, DenseLinearManifold<CoDomainDim>>> {
 
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
@@ -49,10 +47,10 @@ public:
                                       FixedStartPoint, FixedEndPoint>;
 
   using interval_t = std::pair<double, double>;
-  using base_t = LinearManifoldInheritanceHelper<
+  using base_t = detail::Clonable<
       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-      DenseLinearManifold<NumPoints * CoDomainDim * Intervals>>;
-
+      DenseLinearManifold<NumPoints * CoDomainDim * Intervals, false>,
+      Map<Reals, DenseLinearManifold<CoDomainDim>>>;
   using base_t::base_t;
   using base_t::dimension;
   using base_t::operator=;
@@ -62,8 +60,6 @@ public:
     long i1;
     Eigen::Map<Eigen::Vector<double, CoDomainDim>> value;
   };
-
-  class iterator;
 
   // ----------------------------
   // ------ Constants ---------------
@@ -96,14 +92,8 @@ public:
   PWGLVPolynomial(const PWGLVPolynomial &) = default;
   PWGLVPolynomial(PWGLVPolynomial &&) = default;
 
-  const PWGLVPolynomial &operator=(const PWGLVPolynomial &that) {
-    base_t::operator=(that);
-    return *this;
-  }
-  const PWGLVPolynomial &operator=(PWGLVPolynomial &&that) {
-    base_t::operator=(std::move(that));
-    return *this;
-  }
+  PWGLVPolynomial &operator=(const PWGLVPolynomial &_in) = default;
+  PWGLVPolynomial &operator=(PWGLVPolynomial &&_in) = default;
 
   static std::pair<long, long> range_for_pint_index(std::size_t _point_index) {
     std::pair<long, long> result;
@@ -149,7 +139,7 @@ public:
   }
 
   virtual bool diff_from_repr(const double &_in,
-                              Eigen::Ref<Eigen::MatrixXd> _mat) const override {
+                              detail::dense_matrix_ref_t _mat) const override {
 
     auto [interval, s] =
         this->domain_partition_.subinterval_index_and_canonic_value(_in);
@@ -324,7 +314,8 @@ public:
 
     printf("Constant dimension of PWGLVPolynomial %li ----------------\n",
            PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension);
-    PWGLVPolynomial result(_interval);
+    PWGLVPolynomial result;
+    result.domain_partition_ = IntervalPartition<Intervals>(_interval);
 
     for (std::size_t i = 0; i < result.size(); i++) {
       result[i] = _vals;
@@ -335,9 +326,12 @@ public:
 
   static PWGLVPolynomial zero(const IntervalPartition<Intervals> &_interval) {
 
-    PWGLVPolynomial result(_interval);
+    PWGLVPolynomial result;
 
-    result.repr() = PWGLVPolynomial::Representation::Zero();
+    result =
+        *PWGLVPolynomial::from_repr(PWGLVPolynomial::Representation::Zero());
+
+    result.domain_partition_ = IntervalPartition<Intervals>(_interval);
 
     return result;
   }
@@ -441,16 +435,14 @@ template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
           std::size_t ContDeg, bool FixedStartPoint = false,
           bool FixedEndPoint = false>
 class CPWGLVPolynomial
-    : public LinearManifoldInheritanceHelper<
+    : public detail::Clonable<
           CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                            FixedStartPoint, FixedEndPoint>,
           DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
                               CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
                               ((FixedEndPoint) ? CoDomainDim : 0) -
-                              ((FixedStartPoint) ? CoDomainDim : 0)>>,
-      public MapInheritanceHelper<
-          CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg>,
-          Map<Reals, DenseLinearManifold<CoDomainDim>>, MatrixTypeId::Dense> {
+                              ((FixedStartPoint) ? CoDomainDim : 0)>,
+          Map<Reals, DenseLinearManifold<CoDomainDim>>> {
 
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
@@ -463,17 +455,17 @@ public:
   // ----------------------------
   using interval_t = std::pair<double, double>;
 
-  using base_t = LinearManifoldInheritanceHelper<
+  using base_t = detail::Clonable<
       CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                        FixedStartPoint, FixedEndPoint>,
       DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
                           CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
                           ((FixedEndPoint) ? CoDomainDim : 0) -
-                          ((FixedStartPoint) ? CoDomainDim : 0)>>;
+                          ((FixedStartPoint) ? CoDomainDim : 0)>,
+      Map<Reals, DenseLinearManifold<CoDomainDim>>>;
   ;
   using base_t::base_t;
   using base_t::dimension;
-  using base_t::operator=;
 
   struct point_value_t {
     long i0;
@@ -493,6 +485,16 @@ public:
   CPWGLVPolynomial(const CPWGLVPolynomial &) = default;
   CPWGLVPolynomial(CPWGLVPolynomial &&) = default;
 
+  CPWGLVPolynomial &operator=(const CPWGLVPolynomial &_in) {
+    domain_partition_.rerpr() = _in.domain_partition_.crepr();
+    this->repr() = _in.crepr();
+    return *this;
+  }
+  CPWGLVPolynomial &operator=(CPWGLVPolynomial &&_in) {
+    domain_partition_.rerpr() = _in.domain_partition_.crepr();
+    this->repr() = _in.crepr();
+    return *this;
+  }
   /// ---------------------------------------------------------
   /// --------------- Evaluation of the polynomial ------------
   /// ---------------------------------------------------------

@@ -74,26 +74,22 @@ public:
   std::size_t get_dom_tangent_repr_dim() const override;
   std::size_t get_codom_tangent_repr_dim() const override;
 
-  DifferentialReprType linearization_buffer() const override {
-    if (differential_type()) {
-      return Eigen::SparseMatrix<double, Eigen::RowMajor>(
-          get_codom_tangent_repr_dim(), get_dom_tangent_repr_dim());
+  detail::mixed_matrix_t linearization_buffer() const override {
+    if (differential_type() == detail::MatrixTypeId::Sparse) {
+      return detail::sparse_matrix_t(get_codom_tangent_repr_dim(),
+                                     get_dom_tangent_repr_dim());
     } else {
 
       return Eigen::MatrixXd(get_codom_tangent_repr_dim(),
                              get_dom_tangent_repr_dim());
     }
   }
-  MatrixTypeId differential_type() const override {
+  detail::MatrixTypeId differential_type() const override {
     if (std::all_of(maps_.begin(), maps_.end(), [](const auto &in) {
-          return in->differential_type() == MatrixTypeId::Sparse;
+          return in->differential_type() == detail::MatrixTypeId::Sparse;
         }))
-      return MatrixTypeId::Sparse;
-    if (std::any_of(maps_.begin(), maps_.end(), [](const auto &in) {
-          return in->differential_type() == MatrixTypeId::Dense;
-        }))
-      return MatrixTypeId::Dense;
-    return MatrixTypeId::Mixed;
+      return detail::MatrixTypeId::Sparse;
+    return detail::MatrixTypeId::Dense;
   }
 
 protected:
@@ -102,7 +98,7 @@ protected:
 
   /// Stores the matrices result from the different maps in the composition
   /// diff_0 diff_1 ... diff_{n-1}
-  mutable std::vector<DifferentialReprType> matrix_buffers_;
+  mutable std::vector<detail::mixed_matrix_t> matrix_buffers_;
 
   /// Stores the result of the multiplication sequcen of matrices
   /// diff_0 diff_1 diff_2 ... diff_{n-3} diff_{n-2} diff_{n-1}
@@ -110,12 +106,12 @@ protected:
   //                                        matrix_result_buffers_[n-2]
   //                           \----------v----------/
   //                            matrix_result_buffers_[n-3]
-  mutable std::vector<DifferentialReprType> matrix_result_buffers_;
+  mutable std::vector<detail::mixed_matrix_t> matrix_result_buffers_;
 
   bool value_impl(const ManifoldBase *_in, ManifoldBase *_other) const override;
 
   bool diff_impl(const ManifoldBase *_in,
-                 DifferentialReprRefType _mat) const override;
+                 detail::mixed_matrix_ref_t _mat) const override;
 
   ManifoldBase *domain_buffer_impl() const override;
   ManifoldBase *codomain_buffer_impl() const override;
