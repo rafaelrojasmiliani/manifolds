@@ -40,6 +40,7 @@ public:
                          std::conditional_t<DT == detail::MatrixTypeId::Sparse,
                                             detail::sparse_matrix_ref_t,
                                             detail::mixed_matrix_ref_t>>;
+  // FIXME adapt to dynamic type
   using differential_t = std::conditional_t<
       DT == detail::MatrixTypeId::Dense,
       detail::dense_matrix_t<codomain_t::tangent_repr_dimension,
@@ -48,7 +49,9 @@ public:
 
   static constexpr detail::MatrixTypeId differential_type_id = DT;
 
+  // FIXME adapt to dynamic type
   static constexpr std::size_t domain_dimension = DomainType::dimension;
+  // FIXME adapt to dynamic type
   static constexpr std::size_t codomain_dimension = CoDomainType::dimension;
 
   // -------------------------------------
@@ -124,28 +127,31 @@ public:
   // Getters
   // ---------------------------------
   virtual std::size_t get_dom_dim() const override {
-    // if (DomainType::dim == Eigen::Dynamic)
-    //    throw std::invalid_input
+    // FIXME adapt to dynamic type
     return DomainType::dimension;
   }
   virtual std::size_t get_codom_dim() const override {
     std::cout << "\n----  here -\n\n;";
     // if (CoDomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
+    // FIXME adapt to dynamic type
     return CoDomainType::dimension;
   }
   virtual std::size_t get_dom_tangent_repr_dim() const override {
     // if (DomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
+    // FIXME adapt to dynamic type
     return DomainType::tangent_repr_dimension;
   }
   virtual std::size_t get_codom_tangent_repr_dim() const override {
     // if (CoDomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
+    // FIXME adapt to dynamic type
     return CoDomainType::tangent_repr_dimension;
   }
 
   detail::mixed_matrix_t linearization_buffer() const override {
+    // FIXME adapt to dynamic type
     if constexpr (DT == detail::MatrixTypeId::Dense)
       return Eigen::MatrixXd(codomain_t::tangent_repr_dimension,
                              domain_t::tangent_repr_dimension);

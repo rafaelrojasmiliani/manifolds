@@ -15,9 +15,10 @@ def main():
     q = manifolds.linear_manifolds.GLPolynomial.zero(domain)
     plot(q)
 
-    qc = manifolds.linear_manifolds.CGLPolynomial.random(domain)
+    qc = manifolds.linear_manifolds.GLPolynomial.CGLPolynomial.random(domain)
 
-    inc = manifolds.linear_manifolds.Inclusion(0, 10)
+    inc = manifolds.linear_manifolds.GLPolynomial.CGLPolynomial.Inclusion(
+        domain)
 
     q = inc(qc)
     plot(q)

@@ -126,12 +126,15 @@ class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Integral
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Integral,
           DenseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
                          Reals>> {
+public:
   using base_t = detail::Clonable<
       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Integral,
       DenseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
                      Reals>>;
 
-public:
+  using map_t =
+      DenseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>, Reals>;
+
   Integral(const IntervalPartition<Intervals> &_interval)
       : base_t(), domain_partition_(_interval) {
 

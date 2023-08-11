@@ -32,6 +32,7 @@ public:
                          std::conditional_t<DT == detail::MatrixTypeId::Sparse,
                                             detail::sparse_matrix_ref_t,
                                             detail::mixed_matrix_ref_t>>;
+  // FIXME adapt to dynamic type
   using differential_t = std::conditional_t<
       DT == detail::MatrixTypeId::Dense,
       detail::dense_matrix_t<codomain_t::tangent_repr_dimension,
@@ -63,6 +64,7 @@ public:
   }
 
   detail::mixed_matrix_t linearization_buffer() const override {
+    // FIXME adapt to dynamic type
     if constexpr (DT == detail::MatrixTypeId::Dense)
       return Eigen::MatrixXd(codomain_t::tangent_repr_dimension,
                              domain_t::tangent_repr_dimension);
