@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Geometry>
 #include <Manifolds/LinearManifolds/LinearManifolds.hpp>
+#include <Manifolds/Detail.hpp>
 #include <Manifolds/LinearManifolds/Reals.hpp>
 #include <Manifolds/ManifoldBase.hpp>
 #include <pinocchio/algorithm/frames.hpp>
@@ -12,9 +13,9 @@ namespace manifolds {
 
 template <std::size_t NJoints>
 class ForwardKinematics
-    : public MapInheritanceHelper<
+    : public detail::Clonable<
           ForwardKinematics<NJoints>,
-          Map<LinearManifold<NJoints>, LinearManifold<7>, false>> {
+          Map<DenseLinearManifold<NJoints>, DenseLinearManifold<7>>> {
 
 private:
   pinocchio::Model model_;
@@ -23,8 +24,9 @@ private:
   std::size_t frame_index_;
 
 public:
-  using Domain = LinearManifold<NJoints>;
-  using Codomain = LinearManifold<7>;
+   using base_t = detail::Clonable<
+          ForwardKinematics<NJoints>,
+          Map<DenseLinearManifold<NJoints>, DenseLinearManifold<7>>> ;
 
   static ForwardKinematics from_urdf(const std::string &_path,
                                      const std::string &_frame) {
@@ -52,9 +54,15 @@ public:
                                   std::to_string(NJoints));
   }
 
+  // pinocchio::Data does not support copy construction.
+  ForwardKinematics(const ForwardKinematics& _that)
+      : model_(_that.model_), data_(_that.model_), frame_name_(_that.frame_name_),
+  frame_index_(_that.frame_index_){
+      }
+
   virtual bool value_on_repr(
-      const Eigen::Matrix<double, Domain::dimension, 1> &in,
-      Eigen::Matrix<double, Codomain::dimension, 1> &out) const override {
+      const Eigen::Matrix<double, base_t::domain_t::dimension, 1> &in,
+      Eigen::Matrix<double, base_t::codomain_t::dimension, 1> &out) const override {
 
     pinocchio::forwardKinematics(model_, data_, in);
     pinocchio::updateFramePlacements(model_, data_);
@@ -67,8 +75,8 @@ public:
   }
 
   virtual bool
-  diff_from_repr(const Eigen::Matrix<double, Domain::dimension, 1> &in,
-                 detail::DifferentialReprRef_t<false> _mat) const override {
+  diff_from_repr(const Eigen::Matrix<double, base_t::domain_t::dimension, 1> &in,
+                 detail::dense_matrix_ref_t _mat) const override {
 
     pinocchio::computeJointJacobians(model_, data_, in);
     pinocchio::getFrameJacobian(model_, data_, frame_index_,

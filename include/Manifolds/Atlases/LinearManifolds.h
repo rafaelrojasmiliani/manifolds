@@ -225,6 +225,10 @@ public:
   static const constexpr bool is_differential_sparse = false;
   constexpr static long EffectiveCols = Cols;
   constexpr static long EffectiveRows = Rows;
+
+  static constexpr std::size_t dimension = Rows * Cols;
+  static constexpr std::size_t tangent_repr_dimension = Rows * Cols;
+
   using Representation = Eigen::Matrix<double, Rows, Cols>;
   using RepresentationRef = Representation &;
 
@@ -282,13 +286,9 @@ public:
     result = ChangeOfCoordinatesDiff::Identity();
   }
 
-  static constexpr std::size_t dimension = Rows * Cols;
-
-  static constexpr std::size_t tangent_repr_dimension = Rows * Cols;
-
   static bool comparison(const Representation &_lhs,
                          const Representation &_rhs) {
-    double _tol = 1.0e-12;
+    double _tol = 1.0e-6;
     double err = 0;
     double lhs_max = 0;
     double rhs_max = 0;

@@ -146,7 +146,7 @@ template <typename T> struct TestMap {
         T::codomain_t::random_projection();
 
     original(domain_value, codomain_value_a);
-    auto codomain_value_b = cloned_base->value(domain_value.clone());
+    auto codomain_value_b = cloned_base->value(*domain_value.clone());
   }
 };
 

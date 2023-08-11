@@ -21,6 +21,7 @@ if(OPENMP_FOUND)
   set(CMAKE_EXE_LINKER_FLAGS
       "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
+
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(ENV{ASAN_OPTIONS} "symbolize=1:detect_leaks=1")
   set(CMAKE_CXX_FLAGS_DEBUG
@@ -32,9 +33,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
       -fno-sanitize=alignment \
       -fno-sanitize=null \
       -fno-omit-frame-pointer \
-      -fno-sanitize-recover=all")
-  set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address")
+      -fno-sanitize-recover=all ")
+  # -Q \ -ftime-report command for compilation profiling
+  set(CMAKE_LINKER_FLAGS_DEBUG ${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address)
 endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_INSTALL_PREFIX /usr)
@@ -58,10 +61,9 @@ if(USE_PINOCCHIO)
   set(pinocchio_DIR /opt/openrobots/lib/cmake/pinocchio)
   set(hpp-fcl_DIR /opt/openrobots/lib/cmake/hpp-fcl)
   set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-  # list(APPEND SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/PinocchioFK.cpp)
   find_package(pinocchio REQUIRED)
-
 endif()
+
 add_library(manifolds SHARED ${SOURCE_FILES})
 target_link_libraries(manifolds ${pinocchio_LIBRARIES})
 
@@ -92,5 +94,13 @@ endif()
 
 pybind11_add_module(pymanifolds
                     ${PROJECT_SOURCE_DIR}/python/bindings/bindings.cpp)
-target_include_directories(pymanifolds PUBLIC include /usr/include/eigen3)
+target_include_directories(
+  pymanifolds
+  PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include>
+         ${Eigen3_INCLUDE_DIRS}
+         /usr/include/eigen3
+         ${PROJECT_SOURCE_DIR}/submodules/gcem/include/
+         ${PROJECT_SOURCE_DIR}/submodules/fpm/include/
+         ${pinocchio_INCLUDE_DIRS})
 target_link_libraries(pymanifolds PUBLIC manifolds)

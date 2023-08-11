@@ -14,7 +14,7 @@ class MapBaseComposition;
 class MapBase {
   friend class MapBaseComposition;
 
-private:
+protected:
   virtual bool value_impl(const ManifoldBase *_in,
                           ManifoldBase *_other) const = 0;
   // Here, change to Variant of dense and sparse matrix
@@ -23,23 +23,31 @@ private:
 
 public:
   // Default lifecycle
-  virtual ~MapBase() = default;
-  // value returns
-  std::unique_ptr<ManifoldBase>
-  value(const std::unique_ptr<ManifoldBase> &_in) const;
+  virtual ~MapBase();
 
-  // value gets a buffer
-  bool value(const std::unique_ptr<ManifoldBase> &_in,
-             std::unique_ptr<ManifoldBase> &_other) const;
-
-  // other stuff
   std::unique_ptr<MapBase> clone() const;
 
   std::unique_ptr<MapBase> move_clone();
 
-  bool diff(const std::unique_ptr<ManifoldBase> &_in,
-            detail::mixed_matrix_ref_t _mat) const;
+  // --------------------
+  // Evaluation
+  // --------------------
 
+  // Evaluation
+  std::unique_ptr<ManifoldBase> value(const ManifoldBase &_in) const;
+
+  // Evaluation in pre-allocated buffer
+  bool value(const std::unique_ptr<ManifoldBase> &_in,
+             std::unique_ptr<ManifoldBase> &_other) const;
+
+  // differentiation in pre-allocated buffer
+  bool diff(const ManifoldBase &_in, detail::mixed_matrix_ref_t _mat) const;
+
+  // differentiation
+  detail::mixed_matrix_t diff(const ManifoldBase &_in) const;
+
+  virtual std::unique_ptr<MapBaseComposition>
+  pre_compose_ptr(const std::unique_ptr<MapBase> &) = 0;
   // return manifold buffers
   virtual std::unique_ptr<ManifoldBase> codomain_buffer() const;
   std::unique_ptr<ManifoldBase> domain_buffer() const;

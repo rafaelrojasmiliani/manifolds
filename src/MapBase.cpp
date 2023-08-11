@@ -1,12 +1,14 @@
+#include <Manifolds/Detail.hpp>
 #include <Manifolds/Maps/MapBase.hpp>
 namespace manifolds {
 
-std::unique_ptr<ManifoldBase>
-MapBase::value(const std::unique_ptr<ManifoldBase> &_in) const {
+std::unique_ptr<ManifoldBase> MapBase::value(const ManifoldBase &_in) const {
   std::unique_ptr<ManifoldBase> result = codomain_buffer();
-  value_impl(_in.get(), result.get());
+  value_impl(&_in, result.get());
   return result;
 }
+
+MapBase::~MapBase() = default;
 
 // value gets a buffer
 bool MapBase::value(const std::unique_ptr<ManifoldBase> &_in,
@@ -23,9 +25,14 @@ std::unique_ptr<MapBase> MapBase::move_clone() {
   return std::unique_ptr<MapBase>(move_clone_impl());
 }
 
-bool MapBase::diff(const std::unique_ptr<ManifoldBase> &_in,
+bool MapBase::diff(const ManifoldBase &_in,
                    detail::mixed_matrix_ref_t _mat) const {
-  return diff_impl(_in.get(), _mat);
+  return diff_impl(&_in, _mat);
+}
+detail::mixed_matrix_t MapBase::diff(const ManifoldBase &_in) const {
+  auto result = this->linearization_buffer();
+  diff_impl(&_in, detail::mixed_matrix_to_ref(result));
+  return result;
 }
 
 // return manifold buffers

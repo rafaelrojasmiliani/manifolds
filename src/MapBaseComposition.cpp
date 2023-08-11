@@ -14,21 +14,17 @@ void MapBaseComposition::add_matrix_to_result_buffers() {
       [this, last_index, penultimate_index](auto &&arg, auto &&arg2) {
         using T1 = std::decay_t<decltype(arg)>;
         using T2 = std::decay_t<decltype(arg2)>;
-        if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
-                      std::is_same_v<T2, Eigen::MatrixXd>) {
-          // this matrix stores the result of diff_penultimat * diff_last
-          this->matrix_result_buffers_.emplace_back(
-              Eigen::MatrixXd(maps_[penultimate_index]->get_codom_dim(),
-                              maps_[last_index]->get_dom_dim()));
-        } else if constexpr (std::is_same_v<T1, Eigen::SparseMatrix<double>> &&
-                             std::is_same_v<T2, Eigen::SparseMatrix<double>>) {
+        if constexpr (std::is_same_v<T1, Eigen::SparseMatrix<double>> &&
+                      std::is_same_v<T2, Eigen::SparseMatrix<double>>) {
           // this matrix stores the result of diff_penultimat * diff_last
 
-          this->matrix_result_buffers_.emplace_back(Eigen::SparseMatrix<double>(
-              maps_[penultimate_index]->get_codom_dim(),
-              maps_[last_index]->get_dom_dim()));
+          this->matrix_result_buffers_.emplace_back(detail::sparse_matrix_t(
+              maps_[penultimate_index]->get_codom_tangent_repr_dim(),
+              maps_[last_index]->get_dom_tangent_repr_dim()));
         } else {
-          throw std::logic_error("cannot be here");
+          this->matrix_result_buffers_.emplace_back(Eigen::MatrixXd(
+              maps_[penultimate_index]->get_codom_tangent_repr_dim(),
+              maps_[last_index]->get_dom_tangent_repr_dim()));
         }
       },
       matrix_buffers_[last_index], matrix_buffers_[penultimate_index]);
@@ -50,20 +46,17 @@ void MapBaseComposition::fill_matrix_result_buffers() {
         [this, i, last_index](auto &&arg, auto &&arg2) {
           using T1 = std::decay_t<decltype(arg)>;
           using T2 = std::decay_t<decltype(arg2)>;
-          if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
-                        std::is_same_v<T2, Eigen::MatrixXd>)
-            matrix_result_buffers_.emplace(
-                matrix_result_buffers_.begin(),
-                Eigen::MatrixXd(maps_[i]->get_codom_dim(),
-                                maps_[last_index]->get_dom_dim()));
-          else if constexpr (std::is_same_v<T1, Eigen::SparseMatrix<double>> &&
-                             std::is_same_v<T2, Eigen::SparseMatrix<double>>) {
+          if constexpr (std::is_same_v<T1, Eigen::SparseMatrix<double>> &&
+                        std::is_same_v<T2, Eigen::SparseMatrix<double>>) {
             matrix_result_buffers_.emplace(
                 matrix_result_buffers_.begin(),
                 Eigen::SparseMatrix<double>(maps_[i]->get_codom_dim(),
                                             maps_[last_index]->get_dom_dim()));
           } else {
-            throw std::logic_error("cannot be here");
+            matrix_result_buffers_.emplace(
+                matrix_result_buffers_.begin(),
+                Eigen::MatrixXd(maps_[i]->get_codom_dim(),
+                                maps_[last_index]->get_dom_dim()));
           }
         },
         matrix_result_buffers_.front(), matrix_buffers_[i]);
@@ -79,7 +72,6 @@ MapBaseComposition::MapBaseComposition(const MapBaseComposition &_that) {
   for (const auto &map : _that.maps_) {
     maps_.push_back(map->clone());
     codomain_buffers_.push_back(map->codomain_buffer());
-    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.emplace_back(map->linearization_buffer());
   }
   fill_matrix_result_buffers();
@@ -87,7 +79,6 @@ MapBaseComposition::MapBaseComposition(const MapBaseComposition &_that) {
 MapBaseComposition::MapBaseComposition(MapBaseComposition &&_that) {
   for (const auto &map : _that.maps_) {
     codomain_buffers_.push_back(map->codomain_buffer());
-    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.emplace_back(map->linearization_buffer());
     maps_.push_back(map->move_clone());
   }
@@ -98,14 +89,12 @@ MapBaseComposition::MapBaseComposition(const MapBase &_in)
     : MapBase(), maps_() {
   maps_.push_back(_in.clone());
   codomain_buffers_.push_back(_in.codomain_buffer());
-  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.emplace_back(_in.linearization_buffer());
   fill_matrix_result_buffers();
 }
 
 MapBaseComposition::MapBaseComposition(MapBase &&_in) : MapBase(), maps_() {
   codomain_buffers_.push_back(_in.codomain_buffer());
-  // Here, change to Variant of dense and sparse matrix
   matrix_buffers_.emplace_back(_in.linearization_buffer());
   maps_.push_back(_in.move_clone());
   fill_matrix_result_buffers();
@@ -116,7 +105,6 @@ MapBaseComposition::MapBaseComposition(
     : MapBase(), maps_() {
   for (const auto &map : _in) {
     maps_.push_back(map->clone());
-    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.emplace_back(map->linearization_buffer());
     codomain_buffers_.push_back(map->codomain_buffer());
   }
@@ -128,7 +116,6 @@ MapBaseComposition::MapBaseComposition(
     : MapBase(), maps_() {
   for (auto &map : _in) {
     codomain_buffers_.push_back(map->codomain_buffer());
-    // Here, change to Variant of dense and sparse matrix
     matrix_buffers_.emplace_back(map->linearization_buffer());
     maps_.push_back(map->move_clone());
   }
@@ -282,9 +269,9 @@ bool MapBaseComposition::diff_impl(const ManifoldBase *_in,
         [&](auto &&arg) {
           using T = std::decay_t<decltype(arg)>;
           if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
-            (*map_it)->diff(*domain_it, std::get<0>(*matrix_it));
+            (*map_it)->diff(**domain_it, std::get<0>(*matrix_it));
           else if constexpr (std::is_same_v<T, Eigen::SparseMatrix<double>>) {
-            (*map_it)->diff(*domain_it, std::get<1>(*matrix_it));
+            (*map_it)->diff(**domain_it, std::get<1>(*matrix_it));
           } else {
             throw std::logic_error("cannot be here");
           }
@@ -347,6 +334,11 @@ std::size_t MapBaseComposition::get_dom_tangent_repr_dim() const {
 }
 std::size_t MapBaseComposition::get_codom_tangent_repr_dim() const {
   return maps_.front()->get_codom_dim();
+}
+
+std::unique_ptr<MapBaseComposition>
+MapBaseComposition::pre_compose_ptr(const std::unique_ptr<MapBase> &) {
+  return std::make_unique<MapBaseComposition>(maps_);
 }
 
 } // namespace manifolds

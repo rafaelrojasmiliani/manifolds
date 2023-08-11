@@ -29,6 +29,14 @@ virtual std::size_t get_dim() const override {
 virtual std::size_t get_tanget_repr_dim() const override {
   PYBIND11_OVERRIDE_PURE(std::size_t, PyManifoldBase, get_tanget_repr_dim);
 }
+virtual bool has_value() const override {
+  PYBIND11_OVERRIDE_PURE(bool, PyManifoldBase, has_value);
+}
+
+  virtual bool is_equal(const std::unique_ptr<ManifoldBase> &) const  override
+{
+  PYBIND11_OVERRIDE_PURE(bool, PyManifoldBase, is_equal);
+}
 };
 
 } // namespace manifolds

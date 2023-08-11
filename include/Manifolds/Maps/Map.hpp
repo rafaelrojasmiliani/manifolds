@@ -27,6 +27,13 @@ public:
   using domain_t = DomainType;
   using codomain_t = CoDomainType;
 
+  using domain_facade_t =
+      std::conditional_t<domain_t::is_faithful,
+                         typename domain_t::Representation, domain_t>;
+  using codomain_facade_t =
+      std::conditional_t<codomain_t::is_faithful,
+                         typename codomain_t::Representation, codomain_t>;
+
   using differential_ref_t =
       std::conditional_t<DT == detail::MatrixTypeId::Dense,
                          detail::dense_matrix_ref_t,
@@ -38,6 +45,8 @@ public:
       detail::dense_matrix_t<codomain_t::tangent_repr_dimension,
                              domain_t::tangent_repr_dimension>,
       detail::sparse_matrix_t>;
+
+  static constexpr detail::MatrixTypeId differential_type_id = DT;
 
   static constexpr std::size_t domain_dimension = DomainType::dimension;
   static constexpr std::size_t codomain_dimension = CoDomainType::dimension;
@@ -59,20 +68,18 @@ public:
   // ---------------------------------
   // Definition of bool value(in, out)
   // ---------------------------------
-  bool value(const typename domain_t::facade_t &_in,
-             typename codomain_t::facade_t &_out) const {
+  bool value(const domain_facade_t &_in, codomain_facade_t &_out) const {
     return value_on_repr(_in, _out);
   }
 
   // ---------------------------------
   // Definition of bool operator(in, out)
   // ---------------------------------
-  bool operator()(const typename domain_t::facade_t &_in,
-                  typename codomain_t::facade_t &_out) const {
+  bool operator()(const domain_facade_t &_in, codomain_facade_t &_out) const {
     return value_on_repr(_in, _out);
   }
 
-  codomain_t operator()(const typename domain_t::facade_t &_in) const {
+  codomain_t operator()(const domain_facade_t &_in) const {
     static auto out = codomain_t();
     value_on_repr(_in, out);
     return out;
@@ -81,12 +88,11 @@ public:
   // ---------------------------------
   // Definition of bool diff(in, out)
   // ---------------------------------
-  bool diff(const typename domain_t::facade_t &_in,
-            differential_ref_t _out) const {
+  bool diff(const domain_facade_t &_in, differential_ref_t _out) const {
     return diff_from_repr(_in, _out);
   }
 
-  differential_t diff(const typename domain_t::facade_t &_in) const {
+  differential_t diff(const domain_facade_t &_in) const {
     differential_t out;
     diff_from_repr(_in, out);
     return out;
@@ -95,15 +101,23 @@ public:
   // ---------------------------------
   // Definition of Composition
   // ---------------------------------
-  template <typename OtherDomainType, bool OtherDiffIsSparse>
-  MapComposition<CoDomainType, OtherDomainType>
-  compose(const Map<DomainType, OtherDomainType> &_in) const {
-    static_assert(std::is_base_of_v<ManifoldBase, CoDomainType>);
-    static_assert(std::is_base_of_v<ManifoldBase, DomainType>);
+  std::unique_ptr<MapBaseComposition>
+  pre_compose_ptr(const std::unique_ptr<MapBase> &_other) override {
+    auto foo = std::vector<std::unique_ptr<MapBase>>{};
+    foo.push_back(this->clone());
+    foo.push_back(_other->clone());
+    return std::make_unique<MapBaseComposition>(foo);
+  }
+  template <typename OtherDomainType, detail::MatrixTypeId OtherDT>
+  auto compose(const Map<OtherDomainType, DomainType, OtherDT> &_in) const & {
+    constexpr detail::MatrixTypeId mt =
+        (OtherDT == DT and DT == detail::MatrixTypeId::Sparse)
+            ? detail::MatrixTypeId::Sparse
+            : detail::MatrixTypeId::Dense;
+    MapBaseComposition result(*this);
+    result.append(_in);
 
-    auto a = MapComposition<CoDomainType, DomainType>(*this);
-
-    return a.compose(_in);
+    return MapComposition<OtherDomainType, CoDomainType, mt>(result);
   }
 
   // ---------------------------------
@@ -115,6 +129,7 @@ public:
     return DomainType::dimension;
   }
   virtual std::size_t get_codom_dim() const override {
+    std::cout << "\n----  here -\n\n;";
     // if (CoDomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
     return CoDomainType::dimension;
@@ -145,15 +160,15 @@ protected:
   bool value_impl(const ManifoldBase *_in,
                   ManifoldBase *_other) const override {
 
-    const typename domain_t::facade_t *input_ptr = nullptr;
-    typename codomain_t::facade_t *output_ptr = nullptr;
+    const domain_facade_t *input_ptr = nullptr;
+    codomain_facade_t *output_ptr = nullptr;
 
     if constexpr (DomainType::is_faithful)
       input_ptr = &static_cast<const DomainType *>(_in)->crepr();
     else
       input_ptr = static_cast<const DomainType *>(_in);
 
-    if constexpr (DomainType::is_faithful)
+    if constexpr (CoDomainType::is_faithful)
       output_ptr = &static_cast<CoDomainType *>(_other)->repr();
     else
       output_ptr = static_cast<CoDomainType *>(_other);
@@ -166,7 +181,7 @@ protected:
   bool diff_impl(const ManifoldBase *_in,
                  detail::mixed_matrix_ref_t _mat) const override {
 
-    const typename domain_t::facade_t *input_ptr = nullptr;
+    const domain_facade_t *input_ptr = nullptr;
 
     if constexpr (DomainType::is_faithful)
       input_ptr = &static_cast<const DomainType *>(_in)->crepr();
@@ -196,12 +211,12 @@ protected:
 protected:
   /// Function to copmute the result of the map using just the representation
   /// types
-  virtual bool value_on_repr(const typename domain_t::facade_t &_in,
-                             typename codomain_t::facade_t &_result) const = 0;
+  virtual bool value_on_repr(const domain_facade_t &_in,
+                             codomain_facade_t &_result) const = 0;
 
   /// Function to copmute the result of the map differential using just the
   /// representation types
-  virtual bool diff_from_repr(const typename domain_t::facade_t &_in,
+  virtual bool diff_from_repr(const domain_facade_t &_in,
                               differential_ref_t _mat) const = 0;
 
   virtual Map *clone_impl() const override = 0;
@@ -252,12 +267,14 @@ public:
   MapLifting(const value_fun_t &_value_fun, const diff_fun_t &_diff_fun)
       : base_t(), value_fun_(_value_fun), diff_fun_(_diff_fun) {}
 
-  bool value_on_repr(const Domain &_in, Codomain &_result) const override {
+  bool
+  value_on_repr(const typename base_t::domain_facade_t &_in,
+                typename base_t::codomain_facade_t &_result) const override {
 
     return value_fun_(_in, _result);
   }
 
-  bool diff_from_repr(const Domain &_in,
+  bool diff_from_repr(const typename base_t::domain_facade_t &_in,
                       typename base_t::differential_ref_t _mat) const override {
     return diff_fun_(_in, _mat);
   }

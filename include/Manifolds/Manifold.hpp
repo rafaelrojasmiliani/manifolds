@@ -25,7 +25,8 @@ public:
 template <typename Atlas, bool Faithful = false>
 class Manifold : public ManifoldBase {
   template <typename T, typename U, detail::MatrixTypeId DT> friend class Map;
-  template <typename T, typename U> friend class MapComposition;
+  template <typename T, typename U, detail::MatrixTypeId DT>
+  friend class MapComposition;
 
   using base_t = ManifoldBase;
 
@@ -177,14 +178,14 @@ public:
   }
 
   template <bool F = Faithful>
-  constexpr operator std::enable_if_t<F, Representation> &&() && {
+  constexpr operator std::enable_if_t<F, Representation>() && {
     if (not representation_)
-      throw std::logic_error("Trying to assign to a constant manifold element");
-    auto &&temp = std::move(*representation_);
+      throw std::logic_error("Trying to move a constant manifold element");
+    Representation temp = std::move(*representation_);
     delete representation_;
     representation_ = nullptr;
     const_representation_ = nullptr;
-    return std::move(temp);
+    return temp;
   }
 
   template <bool F = Faithful>

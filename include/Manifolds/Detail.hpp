@@ -7,6 +7,8 @@
 namespace manifolds {
 namespace detail {
 
+constexpr int Dynamic = Eigen::Dynamic;
+
 template <typename Base, typename... Args> struct inherits_from;
 
 template <typename Base, typename Arg, typename... Rest>
@@ -62,6 +64,12 @@ using mixed_matrix_t =
     std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double, Eigen::RowMajor>>;
 
 enum MatrixTypeId { Dense = 0, Sparse };
+
+inline mixed_matrix_ref_t mixed_matrix_to_ref(mixed_matrix_t &mm) {
+  if (std::holds_alternative<Eigen::MatrixXd>(mm))
+    return Eigen::Ref<Eigen::MatrixXd>(std::get<Eigen::MatrixXd>(mm));
+  return sparse_matrix_ref_t(std::get<sparse_matrix_t>(mm));
+}
 
 #define __INHERIT_LIVE_CYCLE(B)                                                \
 public:                                                                        \

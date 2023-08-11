@@ -1,11 +1,14 @@
 include(GoogleTest)
-include_directories(PUBLIC ${PROJECT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS})
+include_directories(PUBLIC ${PROJECT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS}
+                    ${pinocchio_INCLUDE_DIRS})
 
 file(GLOB_RECURSE test_list ${PROJECT_SOURCE_DIR}/tests/*.cpp)
 file(GLOB_RECURSE test_py_list ${CMAKE_SOURCE_DIR}/tests/*.py)
 list(REMOVE_ITEM test_py_list "${PROJECT_SOURCE_DIR}/tests/__init__.py")
 list(REMOVE_ITEM test_py_list "${PROJECT_SOURCE_DIR}/tests/tools.py")
-# list(REMOVE_ITEM test_list "${PROJECT_SOURCE_DIR}/tests/pinocchio.cpp")
+if(NOT USE_PINOCCHIO)
+  list(REMOVE_ITEM test_list "${PROJECT_SOURCE_DIR}/tests/pinocchio.cpp")
+endif()
 
 # https://developers.redhat.com/blog/2021/05/05/memory-error-checking-in-c-and-c-comparing-sanitizers-and-valgrind
 set(ENV_ASAN
@@ -23,10 +26,12 @@ foreach(file_path ${test_list})
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests
     PROPERTIES ENVIRONMENT ${ENV_ASAN})
 
+  # set_target_properties(your_target_name PROPERTIES WORKING_DIRECTORY
+  # "/path/to/your/working/directory")
+
   # https://github.com/stack-of-tasks/pinocchio/issues/1261
-  target_link_libraries(
-    ${new_name} PRIVATE gtest pthread manifolds Eigen3::Eigen
-                        ${pinocchio_LIBRARIES})
+  target_link_libraries(${new_name} PRIVATE gtest pthread manifolds
+                                            Eigen3::Eigen pinocchio::pinocchio)
 endforeach()
 
 foreach(file_path ${test_py_list})

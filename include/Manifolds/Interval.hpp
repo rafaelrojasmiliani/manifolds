@@ -137,6 +137,18 @@ public:
     double lambda = (Eigen::Vector<double, 1>::Random()(0) + 1.0) / 2.0;
     return first() * lambda + (1.0 - lambda) * second();
   }
+
+  std::tuple<double, double> as_tuple() {
+    return std::make_tuple<double, double>(first(), second());
+  }
+
+  Eigen::VectorXd sized_linspace(std::size_t n) {
+    return Eigen::VectorXd::LinSpaced(n, first(), second());
+  }
+  Eigen::VectorXd spaced_linspace(double step) {
+    std::size_t n = ((first() - second()) / step) + 1;
+    return Eigen::VectorXd::LinSpaced(n, first(), first() + step * (n - 1));
+  }
 };
 
 template <std::size_t NumberOfIntervals>

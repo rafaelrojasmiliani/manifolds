@@ -35,9 +35,8 @@ class PWGLVPolynomial
 private:
   mutable std::array<double, NumPoints> evaluation_buffer_;
 
-  IntervalPartition<Intervals> domain_partition_;
-
 public:
+  IntervalPartition<Intervals> domain_partition_;
   // ----------------------------
   // ------ Types ---------------
   // ----------------------------
@@ -51,6 +50,14 @@ public:
       PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
       DenseLinearManifold<NumPoints * CoDomainDim * Intervals, false>,
       Map<Reals, DenseLinearManifold<CoDomainDim>>>;
+
+  using map_t = Map<Reals, DenseLinearManifold<CoDomainDim>>;
+
+  using interval_partition_t = IntervalPartition<Intervals>;
+
+  using manifold_t =
+      DenseLinearManifold<NumPoints * CoDomainDim * Intervals, false>;
+
   using base_t::base_t;
   using base_t::dimension;
   using base_t::operator=;
@@ -77,6 +84,13 @@ public:
   // ----------------------------
 
   PWGLVPolynomial() : base_t(), domain_partition_() {
+
+    printf("QQdimension of PWGLVPolynomial %li ----------------\n",
+           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension);
+  }
+
+  PWGLVPolynomial(double a, double b)
+      : base_t(), domain_partition_(Interval(a, b)) {
 
     printf("QQdimension of PWGLVPolynomial %li ----------------\n",
            PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension);
@@ -126,14 +140,15 @@ public:
 
     auto [interval, s] =
         this->domain_partition_.subinterval_index_and_canonic_value(in);
+
     for (std::size_t i = 0; i < CoDomainDim; i++) {
 
-      Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
+      Eigen::Ref<const Eigen::Vector<double, CoDomainDim *NumPoints>> aux_vec =
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
 
       out(i) =
-          evaluation(aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim), 0), s);
+          evaluation(aux_vec(Eigen::seqN(i, NumPoints, CoDomainDim), 0), s);
     }
     return true;
   }
@@ -145,12 +160,12 @@ public:
         this->domain_partition_.subinterval_index_and_canonic_value(_in);
     for (std::size_t i = 0; i < CoDomainDim; i++) {
 
-      Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
+      Eigen::Ref<const Eigen::Vector<double, CoDomainDim *NumPoints>> aux_vec =
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
 
       _mat(i, 0) = evaluation_derivative(
-                       aux_vec(Eigen::seqN(0, NumPoints, CoDomainDim), 0), s) *
+                       aux_vec(Eigen::seqN(i, NumPoints, CoDomainDim), 0), s) *
                    2.0 / domain_partition_.subinterval_length(interval);
     }
     return true;
@@ -164,6 +179,8 @@ public:
   class Integral;
 
   template <typename CoDomain> class Composition;
+
+  class functions;
 
   /// ---------------------------------------------------------
   /// --------------- Polynomial evaluation -------------------
@@ -269,8 +286,9 @@ public:
 
   const Interval &get_domain() const { return domain_partition_.interval(); }
 
-  Eigen::MatrixXd &points() {
-    return this->repr().reshaped(NumPoints * Intervals, CoDomainDim);
+  Eigen::MatrixXd points() {
+    return this->crepr().template reshaped<Eigen::RowMajor>(
+        NumPoints * Intervals, CoDomainDim);
   }
 
   Eigen::Ref<Eigen::Vector<double, CoDomainDim>>
@@ -299,7 +317,7 @@ public:
 
     return domain_partition_.interval().first() +
            domain_partition_.crepr().array().segment(0, interval).sum() +
-           (glp + 1) / 2.0 * domain_partition_.subinterval_length(interval);
+           (glp + 1.0) / 2.0 * domain_partition_.subinterval_length(interval);
   }
 
   std::size_t size() const { return NumPoints * Intervals; }
@@ -328,13 +346,20 @@ public:
 
     PWGLVPolynomial result;
 
-    result =
-        *PWGLVPolynomial::from_repr(PWGLVPolynomial::Representation::Zero());
-
-    result.domain_partition_ = IntervalPartition<Intervals>(_interval);
+    result = from_repr(_interval, PWGLVPolynomial::Representation::Zero());
 
     return result;
   }
+
+  static PWGLVPolynomial random(const IntervalPartition<Intervals> &_interval) {
+
+    PWGLVPolynomial result;
+
+    result = from_repr(_interval, PWGLVPolynomial::Representation::Random());
+
+    return result;
+  }
+
   template <bool F = CoDomainDim == 1>
   static std::enable_if_t<F, PWGLVPolynomial>
   identity(const IntervalPartition<Intervals> &_interval) {
@@ -346,6 +371,25 @@ public:
       result[i](0) = result.domain_point(i);
     }
 
+    return result;
+  }
+
+  static PWGLVPolynomial
+  from_repr(const IntervalPartition<Intervals> _domain_partision,
+            const typename base_t::Representation &_in) {
+    PWGLVPolynomial result = *base_t::from_repr(_in);
+    result.domain_partition_ = _domain_partision;
+    return result;
+  }
+
+  static PWGLVPolynomial from_function(
+      const IntervalPartition<Intervals> _domain_partision,
+      const std::function<typename base_t::codomain_t::Representation(double)>
+          _fun) {
+    PWGLVPolynomial result(_domain_partision);
+    for (std::size_t i = 0; i < NumPoints * Intervals; i++) {
+      result[i] = _fun(result.domain_point(i));
+    }
     return result;
   }
 
@@ -439,9 +483,10 @@ class CPWGLVPolynomial
           CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                            FixedStartPoint, FixedEndPoint>,
           DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
-                              CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
-                              ((FixedEndPoint) ? CoDomainDim : 0) -
-                              ((FixedStartPoint) ? CoDomainDim : 0)>,
+                                  CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
+                                  ((FixedEndPoint) ? CoDomainDim : 0) -
+                                  ((FixedStartPoint) ? CoDomainDim : 0),
+                              false>,
           Map<Reals, DenseLinearManifold<CoDomainDim>>> {
 
 private:
@@ -455,13 +500,23 @@ public:
   // ----------------------------
   using interval_t = std::pair<double, double>;
 
+  using manifold_t =
+      DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
+                              CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
+                              ((FixedEndPoint) ? CoDomainDim : 0) -
+                              ((FixedStartPoint) ? CoDomainDim : 0),
+                          false>;
+
+  using map_t = Map<Reals, DenseLinearManifold<CoDomainDim>>;
+
   using base_t = detail::Clonable<
       CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                        FixedStartPoint, FixedEndPoint>,
       DenseLinearManifold<NumPoints * CoDomainDim * Intervals -
-                          CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
-                          ((FixedEndPoint) ? CoDomainDim : 0) -
-                          ((FixedStartPoint) ? CoDomainDim : 0)>,
+                              CoDomainDim *(Intervals - 1) * (ContDeg + 1) -
+                              ((FixedEndPoint) ? CoDomainDim : 0) -
+                              ((FixedStartPoint) ? CoDomainDim : 0),
+                          false>,
       Map<Reals, DenseLinearManifold<CoDomainDim>>>;
   ;
   using base_t::base_t;
@@ -475,6 +530,9 @@ public:
 
   CPWGLVPolynomial() : base_t(), domain_partition_() {}
 
+  CPWGLVPolynomial(double a, double b)
+      : CPWGLVPolynomial(IntervalPartition<Intervals>(a, b)) {}
+
   CPWGLVPolynomial(const IntervalPartition<Intervals> &_domain)
       : base_t(), domain_partition_(_domain) {}
 
@@ -485,16 +543,8 @@ public:
   CPWGLVPolynomial(const CPWGLVPolynomial &) = default;
   CPWGLVPolynomial(CPWGLVPolynomial &&) = default;
 
-  CPWGLVPolynomial &operator=(const CPWGLVPolynomial &_in) {
-    domain_partition_.rerpr() = _in.domain_partition_.crepr();
-    this->repr() = _in.crepr();
-    return *this;
-  }
-  CPWGLVPolynomial &operator=(CPWGLVPolynomial &&_in) {
-    domain_partition_.rerpr() = _in.domain_partition_.crepr();
-    this->repr() = _in.crepr();
-    return *this;
-  }
+  CPWGLVPolynomial &operator=(const CPWGLVPolynomial &_in) = default;
+  CPWGLVPolynomial &operator=(CPWGLVPolynomial &&_in) = default;
   /// ---------------------------------------------------------
   /// --------------- Evaluation of the polynomial ------------
   /// ---------------------------------------------------------
@@ -511,7 +561,7 @@ public:
     return true;
   }
 
-  static Eigen::SparseMatrix<double, Eigen::RowMajor> canonical_immersion() {
+  static Eigen::SparseMatrix<double, Eigen::RowMajor> canonical_inclusion() {
 
     Eigen::SparseMatrix<double, Eigen::RowMajor> smT =
         PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::continuity_matrix(
@@ -534,15 +584,46 @@ public:
   }
 
   static Eigen::SparseMatrix<double, Eigen::RowMajor> euclidean_projector() {
-    Eigen::SparseMatrix<double, Eigen::RowMajor> ci = canonical_immersion();
-    Eigen::SparseMatrix<double, Eigen::RowMajor> result = ci * ci.transpose();
+    Eigen::SparseMatrix<double, Eigen::RowMajor> ci = canonical_inclusion();
+    // TODO this is a pseudo inverse
+    Eigen::SparseMatrix<double, Eigen::RowMajor> result =
+        ((ci.transpose() * ci).toDense().inverse() * ci.transpose())
+            .sparseView();
     return result;
   }
 
-  class Immersion;
+  class Inclusion;
   class EuclideanProjection;
 
   class ContinuityError;
+  // ---------------------------------------
+  // ------ Default Elements ---------------
+  // ---------------------------------------
+
+  static CPWGLVPolynomial zero(const IntervalPartition<Intervals> &_interval) {
+
+    CPWGLVPolynomial result;
+
+    result =
+        *CPWGLVPolynomial::from_repr(CPWGLVPolynomial::Representation::Zero());
+
+    result.domain_partition_ = IntervalPartition<Intervals>(_interval);
+
+    return result;
+  }
+
+  static CPWGLVPolynomial
+  random(const IntervalPartition<Intervals> &_interval) {
+
+    CPWGLVPolynomial result;
+
+    result = *CPWGLVPolynomial::from_repr(
+        CPWGLVPolynomial::Representation::Random());
+
+    result.domain_partition_ = IntervalPartition<Intervals>(_interval);
+
+    return result;
+  }
 };
 
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>

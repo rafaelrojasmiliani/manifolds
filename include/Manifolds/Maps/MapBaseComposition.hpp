@@ -113,6 +113,9 @@ protected:
   bool diff_impl(const ManifoldBase *_in,
                  detail::mixed_matrix_ref_t _mat) const override;
 
+  virtual std::unique_ptr<MapBaseComposition>
+  pre_compose_ptr(const std::unique_ptr<MapBase> &) override;
+
   ManifoldBase *domain_buffer_impl() const override;
   ManifoldBase *codomain_buffer_impl() const override;
 
@@ -123,6 +126,9 @@ protected:
   virtual MapBaseComposition *move_clone_impl() override {
     return new MapBaseComposition(std::move(*(this)));
   }
+
+  mutable std::vector<ManifoldBase *> value_buffer_;
+  mutable std::vector<const ManifoldBase *> const_value_buffer_;
 
   void fill_matrix_result_buffers();
   void add_matrix_to_result_buffers();
