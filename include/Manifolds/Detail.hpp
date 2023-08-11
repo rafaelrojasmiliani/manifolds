@@ -132,6 +132,15 @@ public:
   using Bases::operator=...;
   __DEFAULT_LIVE_CYCLE(Clonable)
 public:
+  using manifold_t =
+      std::conditional_t<inherits_from_v<ManifoldBase, Bases...>,
+                         inherits_from_t<ManifoldBase, Bases...>, void>;
+
+  using map_t = std::conditional_t<inherits_from_v<MapBase, Bases...>,
+                                   inherits_from_t<MapBase, Bases...>, void>;
+
+  using base_t = Clonable;
+
   std::unique_ptr<Current> clone() const {
     return std::unique_ptr<Current>(static_cast<Current *>(this->clone_impl()));
   }

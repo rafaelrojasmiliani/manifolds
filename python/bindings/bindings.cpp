@@ -30,8 +30,7 @@ void register_map_once(
   if (firstCall) {
     std::visit(
         [&](auto &&x) {
-          py::class_<M, MapTrampoline<M>, MapBase>(x.get(), name.c_str())
-              .def(py::init<>());
+          py::class_<M, MapTrampoline<M>, MapBase>(x.get(), name.c_str());
         },
         m);
   }
@@ -62,13 +61,12 @@ auto register_user_map(Mod &m, const std::string &name) {
   register_map_once<typename M::map_t>(m, name + "Map");
 
   py::class_<typename M::base_t, MapTrampoline<typename M::base_t>,
-             typename M::map_t>(m, name + "Clonable")
+             typename M::map_t>(m, (name + "Clonable").c_str())
       .def(py::init<>())
       .def("clone", &M::base_t::clone)
       .def("move_clone", &M::base_t::move_clone);
 
   py::class_<M, typename M::base_t> result(m, name.c_str());
-
   result.def("__call__", [](const M &_this, const typename M::domain_t &_in) {
     return _this(_in);
   });
@@ -104,6 +102,24 @@ auto register_user_linear_map(Mod &m, const std::string &name) {
     return _this(_in);
   });
   return result;
+}
+template <typename M>
+void register_const_map(
+    std::variant<std::reference_wrapper<py::detail::generic_type>,
+                 std::reference_wrapper<py::module>>
+        m,
+    M &&instance, const std::string &name, const std::string &type_name) {
+  static bool firstCall = true;
+  if (firstCall) {
+    std::visit(
+        [&](auto &&x) {
+          register_user_map<std::decay_t<M>>(x.get(), type_name);
+        },
+        m);
+  }
+
+  std::visit([&](auto &&x) { x.get().attr(name.c_str()) = instance; }, m);
+  firstCall = false;
 }
 
 template <typename M>
@@ -164,6 +180,10 @@ auto register_polynomial(py::module &m, const std::string &name) {
 
   py::class_<typename M::functions> functions(result, "functions");
   functions.def(py::init<>());
+
+  // py::class_<Z1, MapTrampoline<typename Z::map_t>, MapBase>(m, name.c_str());
+  //  py::class_<Z>(m, (name + "Clonable").c_str());
+  register_const_map(functions, M::functions::norm, "norm", "Norm");
 
   return result;
 }
@@ -262,9 +282,9 @@ PYBIND11_MODULE(pymanifolds, manifolds_module) {
   // register_polynomial<PWGLVPolynomial<10, 10, 3>>(linear_manifolds,
   //                                                 "GLPolynomial_3");
 
-  // auto p = register_polynomial<PWGLVPolynomial<10, 10, 1>>(linear_manifolds,
-  //                                                          "GLPolynomial_1");
+  auto p = register_polynomial<PWGLVPolynomial<10, 10, 1>>(linear_manifolds,
+                                                           "GLPolynomial_1");
 
-  // register_user_linear_map<typename PWGLVPolynomial<10, 10, 1>::Integral>(
-  //     p, "Integral");
+  register_user_linear_map<typename PWGLVPolynomial<10, 10, 1>::Integral>(
+      p, "Integral");
 }
