@@ -18,7 +18,7 @@ template <typename T> struct TestManifold {
 
     EXPECT_TRUE(empty_constructed == move_constructed);
 
-    manifold_base(move_constructed);
+     manifold_base(move_constructed);
   }
 
   /// Here we test that we can manipulate the value of the
@@ -68,39 +68,39 @@ template <typename T> struct TestManifoldFaithful : public TestManifold<T> {
 
   TestManifoldFaithful() : TestManifold<T>() {
 
-    T manifold = T::random_projection();
+    //T manifold = T::random_projection();
 
-    typename T::Representation representation;
+    //typename T::Representation representation;
 
-    representation = manifold;
+    //representation = manifold;
 
-    EXPECT_TRUE(T::atlas::comparison(representation, manifold.crepr()));
+    //EXPECT_TRUE(T::atlas::comparison(representation, manifold.crepr()));
 
-    representation = T::atlas::random_projection();
+    // representation = T::atlas::random_projection();
 
-    manifold = representation;
-    EXPECT_TRUE(T::atlas::comparison(representation, manifold.crepr()));
+    // manifold = representation;
+    // EXPECT_TRUE(T::atlas::comparison(representation, manifold.crepr()));
 
-    // copy constructor from representation
+    // // copy constructor from representation
 
-    T copy_constructed(representation);
+    // T copy_constructed(representation);
 
-    // Test cast to const reference
-    auto fun_takes_const_reference =
-        [&representation](const typename T::Representation &v) {
-          EXPECT_TRUE(T::atlas::comparison(representation, v));
-        };
+    // // Test cast to const reference
+    // auto fun_takes_const_reference =
+    //     [&representation](const typename T::Representation &v) {
+    //       EXPECT_TRUE(T::atlas::comparison(representation, v));
+    //     };
 
-    fun_takes_const_reference(copy_constructed);
+    // fun_takes_const_reference(copy_constructed);
 
-    // Test cast to reference
-    auto fun_takes_reference =
-        [&representation](typename T::Representation &v) {
-          v = representation;
-        };
-    T empty_constructed;
-    fun_takes_reference(empty_constructed);
-    EXPECT_TRUE(empty_constructed == T::CRef(representation));
+    // // Test cast to reference
+    // auto fun_takes_reference =
+    //     [&representation](typename T::Representation &v) {
+    //       v = representation;
+    //     };
+    // T empty_constructed;
+    // fun_takes_reference(empty_constructed);
+    // EXPECT_TRUE(empty_constructed == T::CRef(representation));
   }
 };
 

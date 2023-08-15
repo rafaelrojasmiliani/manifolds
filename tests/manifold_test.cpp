@@ -15,6 +15,7 @@ using namespace manifolds;
 
 TEST(DenseMatrixManifolds, Test) {
   using T = DenseMatrixManifold<3, 1>;
+
   TestManifoldFaithful<T>();
 }
 

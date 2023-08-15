@@ -321,12 +321,10 @@ TEST(GLPolynomial, Integral) {
 
   auto deriv = Pol::Derivative<1>(interval);
 
-  auto int_after_diff = integral.compose(deriv);
-
   for (int i = 0; i < 10; i++) {
     auto p = Pol::Continuous<2>::Inclusion(interval)(
         Pol::Continuous<2>::random(interval));
-    double test = int_after_diff(p);
+    double test = integral(deriv(p));
     double ground = p(2.0).crepr()(0) - p(0.0).crepr()(0);
     EXPECT_NEAR(test, ground, 1.0e-8);
   }

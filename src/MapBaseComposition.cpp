@@ -6,6 +6,18 @@
 #include <stdexcept>
 namespace manifolds {
 
+detail::mixed_matrix_t get_diff_comp_buffer(const MapBase &_first,
+                                            const MapBase &_second) {
+
+  if (_first.differential_type() == detail::MatrixTypeId::Sparse and
+      _second.differential_type() == detail::MatrixTypeId::Sparse)
+    return detail::sparse_matrix_t(_second.get_codom_tangent_repr_dim(),
+                                   _first.get_dom_tangent_repr_dim());
+
+  return Eigen::MatrixXd(_second.get_codom_tangent_repr_dim(),
+                         _first.get_dom_tangent_repr_dim());
+}
+
 void MapBaseComposition::add_matrix_to_result_buffers() {
 
   std::size_t last_index = matrix_buffers_.size() - 1;
@@ -112,6 +124,14 @@ MapBaseComposition::MapBaseComposition(
 }
 
 MapBaseComposition::MapBaseComposition(
+    const std::vector<std::reference_wrapper<const MapBase>> &_in)
+    : MapBase(), maps_() {
+  for (const auto &map : _in) {
+    append(map.get());
+  }
+}
+
+MapBaseComposition::MapBaseComposition(
     std::vector<std::unique_ptr<MapBase>> &&_in)
     : MapBase(), maps_() {
   for (auto &map : _in) {
@@ -177,45 +197,74 @@ MapBaseComposition &MapBaseComposition::operator=(MapBaseComposition &&that) {
   fill_matrix_result_buffers();
   return *this;
 }
-// -------------------------------------------
-// -------- Modifiers  -----------------------
-// -------------------------------------------
+// ---------------------------------------------------------
+// -------- Modifiers  -------------------------------------
+// ---------------------------------------------------------
+
+// --------   Append  --------------------------------------
+//    f_1      f_2      f_3     f_4    | Buffer of functions
+// ---------------------------------------------------------
+//  ib  ob                             | ib: input buffer
+//  ib  1b    b1 ob                    | ob: output buffer
+//  ib  1b    1b  2b   2b ob           | ib: buff  codom of f_i
+//  ib  1b    1b  2b   2b 3b   3b ob   |
+
 void MapBaseComposition::append(const MapBase &_in) {
-  codomain_buffers_.push_back(_in.codomain_buffer());
-  // Here, change to Variant of dense and sparse matrix
-  matrix_buffers_.push_back(_in.linearization_buffer());
+
+  if (maps_.size() > 1) {
+    codomain_buffers_.push_back(maps_.back()->codomain_buffer());
+    matrix_buffers_.push_back(maps_.back()->linearization_buffer());
+  }
+
   maps_.push_back(_in.clone());
-  fill_matrix_result_buffers();
+
+  aux_codomain_buffers_ptr_.push_back(nullptr);
 }
 
 void MapBaseComposition::append(MapBase &&_in) {
-  codomain_buffers_.push_back(_in.codomain_buffer());
-  // Here, change to Variant of dense and sparse matrix
-  matrix_buffers_.push_back(_in.linearization_buffer());
+  if (maps_.size() > 1) {
+    codomain_buffers_.push_back(maps_.back()->codomain_buffer());
+    matrix_buffers_.push_back(maps_.back()->linearization_buffer());
+  }
+  if (maps_.size() > 2) {
+    matrix_result_buffers_.push_back(
+        get_diff_comp_buffer(*maps_.end()[-2], *maps_.end()[-1]));
+  }
+
   maps_.push_back(_in.move_clone());
-  fill_matrix_result_buffers();
+  aux_codomain_buffers_ptr_.push_back(nullptr);
 }
 // -------------------------------------------
 // -------- Interface  -----------------------
 // -------------------------------------------
+// --------   Evaluation  ----------------------------------
+//    f_1      f_2      f_3     f_4    | Buffer of functions
+// ---------------------------------------------------------
+//  ib  ob                             | ib: input buffer
+//  ib  1b    b1 ob                    | ob: output buffer
+//  ib  1b    1b  2b   2b ob           | ib: buff  codom of f_i
+//  ib  1b    1b  2b   2b 3b   3b ob   |
+
 bool MapBaseComposition::value_impl(const ManifoldBase *_in,
-                                    ManifoldBase *_other) const {
+                                    ManifoldBase *_out) const {
 
-  auto map_it = maps_.end();
-  auto codomain_it = codomain_buffers_.end();
-  map_it = std::prev(map_it, 1);
-  codomain_it = std::prev(codomain_it, 1);
-  (*map_it)->value_impl(_in, codomain_it->get());
-
-  while (map_it != maps_.begin()) {
-    auto domain_it = codomain_it;
-    --map_it;
-    --codomain_it;
-    (*map_it)->value(*domain_it, *codomain_it);
+  if (maps_.size() == 1) {
+    return maps_.front()->value_impl(_in, _out);
   }
 
-  _other->assign(*codomain_it);
-  return true;
+  maps_.front()->value_impl(_in, codomain_buffers_.front().get());
+
+  std::vector<ManifoldBase *> buffers;
+
+  for (std::size_t i = 1; i < maps_.size() - 1; i++) {
+    bool res = maps_[i]->value_impl(codomain_buffers_[i - 1].get(),
+                                    codomain_buffers_[i].get());
+    if (not res) {
+      return res;
+    }
+  }
+
+  return maps_.front()->value_impl(codomain_buffers_.back().get(), _out);
 }
 // diff_0 diff_1 diff_2 ...    diff_{n-4} diff_{n-3} diff_{n-2} diff_{n-1}
 //                                                   \----------v-------/
@@ -334,11 +383,6 @@ std::size_t MapBaseComposition::get_dom_tangent_repr_dim() const {
 }
 std::size_t MapBaseComposition::get_codom_tangent_repr_dim() const {
   return maps_.front()->get_codom_dim();
-}
-
-std::unique_ptr<MapBaseComposition>
-MapBaseComposition::pre_compose_ptr(const std::unique_ptr<MapBase> &) {
-  return std::make_unique<MapBaseComposition>(maps_);
 }
 
 } // namespace manifolds

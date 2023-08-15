@@ -104,23 +104,17 @@ public:
   // ---------------------------------
   // Definition of Composition
   // ---------------------------------
-  std::unique_ptr<MapBaseComposition>
-  pre_compose_ptr(const std::unique_ptr<MapBase> &_other) override {
-    auto foo = std::vector<std::unique_ptr<MapBase>>{};
-    foo.push_back(this->clone());
-    foo.push_back(_other->clone());
-    return std::make_unique<MapBaseComposition>(foo);
-  }
-  template <typename OtherDomainType, detail::MatrixTypeId OtherDT>
-  auto compose(const Map<OtherDomainType, DomainType, OtherDT> &_in) const & {
+  template <typename OtherCodomain, detail::MatrixTypeId OtherDT>
+  auto operator|(const Map<codomain_t, OtherCodomain, OtherDT> &_in) const & {
+
     constexpr detail::MatrixTypeId mt =
         (OtherDT == DT and DT == detail::MatrixTypeId::Sparse)
             ? detail::MatrixTypeId::Sparse
             : detail::MatrixTypeId::Dense;
-    MapBaseComposition result(*this);
-    result.append(_in);
 
-    return MapComposition<OtherDomainType, CoDomainType, mt>(result);
+    MapBaseComposition result({*this, _in});
+
+    return MapComposition<domain_t, OtherCodomain, mt>(result);
   }
 
   // ---------------------------------
@@ -231,6 +225,17 @@ protected:
   template <typename Atlas, bool F>
   static auto &get_repr(Manifold<Atlas, F> &man) {
     return man.repr();
+  }
+
+private:
+  using MapBase::operator|;
+
+  virtual MapBaseComposition *pipe_impl(const MapBase &_that) const override {
+    return new MapBaseComposition({*this, _that});
+  }
+  virtual MapBaseComposition *pipe_move_impl(MapBase &&_that) const override {
+
+    return new MapBaseComposition({*this, _that});
   }
 };
 

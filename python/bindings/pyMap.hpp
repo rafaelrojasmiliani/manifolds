@@ -59,13 +59,12 @@ public:
 
     PYBIND11_OVERRIDE_PURE(bool, MapBase, diff_impl);
   }
-  MapBaseComposition *
-  pre_compose_ptr_wrapper(const std::unique_ptr<MapBase> &) {
-    PYBIND11_OVERRIDE_PURE(MapBaseComposition *, MapBase, pre_compose_ptr);
+  virtual MapBase *pipe_impl(const MapBase &that) const override {
+    PYBIND11_OVERRIDE_PURE(MapBase *, MapBase, pipe_impl, that);
   }
-  virtual std::unique_ptr<MapBaseComposition>
-  pre_compose_ptr(const std::unique_ptr<MapBase> &) override {
-    return nullptr;
+  virtual MapBase *pipe_move_impl(MapBase &&that) const override {
+
+    PYBIND11_OVERRIDE_PURE(MapBase *, MapBase, pipe_impl, that);
   }
 };
 

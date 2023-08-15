@@ -46,8 +46,6 @@ public:
   // differentiation
   detail::mixed_matrix_t diff(const ManifoldBase &_in) const;
 
-  virtual std::unique_ptr<MapBaseComposition>
-  pre_compose_ptr(const std::unique_ptr<MapBase> &) = 0;
   // return manifold buffers
   virtual std::unique_ptr<ManifoldBase> codomain_buffer() const;
   std::unique_ptr<ManifoldBase> domain_buffer() const;
@@ -57,6 +55,10 @@ public:
   virtual std::size_t get_codom_dim() const = 0;
   virtual std::size_t get_codom_tangent_repr_dim() const = 0;
 
+  std::unique_ptr<MapBase> operator|(const MapBase &) const;
+
+  std::unique_ptr<MapBase> operator|(MapBase &&) const;
+
   virtual detail::mixed_matrix_t linearization_buffer() const = 0;
   virtual detail::MatrixTypeId differential_type() const = 0;
 
@@ -65,6 +67,9 @@ protected:
   virtual MapBase *move_clone_impl() = 0;
   virtual ManifoldBase *domain_buffer_impl() const = 0;
   virtual ManifoldBase *codomain_buffer_impl() const = 0;
+
+  virtual MapBase *pipe_impl(const MapBase &) const = 0;
+  virtual MapBase *pipe_move_impl(MapBase &&) const = 0;
 };
 
 } // namespace manifolds

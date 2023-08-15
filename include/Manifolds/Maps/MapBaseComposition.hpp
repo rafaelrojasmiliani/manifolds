@@ -37,6 +37,10 @@ public:
   /// Construct from a vector of unique pointers to type agnostic maps
   MapBaseComposition(const std::vector<std::unique_ptr<MapBase>> &_in);
 
+  /// Construct from a vector of reference wrappers
+  MapBaseComposition(
+      const std::vector<std::reference_wrapper<const MapBase>> &_in);
+
   /// Move-construct from a vector of unique pointers to type agnostic maps
   MapBaseComposition(std::vector<std::unique_ptr<MapBase>> &&_in);
 
@@ -94,7 +98,9 @@ public:
 
 protected:
   std::vector<std::unique_ptr<MapBase>> maps_;
+
   mutable std::vector<std::unique_ptr<ManifoldBase>> codomain_buffers_;
+  mutable std::vector<ManifoldBase *> aux_codomain_buffers_ptr_;
 
   /// Stores the matrices result from the different maps in the composition
   /// diff_0 diff_1 ... diff_{n-1}
@@ -113,9 +119,6 @@ protected:
   bool diff_impl(const ManifoldBase *_in,
                  detail::mixed_matrix_ref_t _mat) const override;
 
-  virtual std::unique_ptr<MapBaseComposition>
-  pre_compose_ptr(const std::unique_ptr<MapBase> &) override;
-
   ManifoldBase *domain_buffer_impl() const override;
   ManifoldBase *codomain_buffer_impl() const override;
 
@@ -132,6 +135,15 @@ protected:
 
   void fill_matrix_result_buffers();
   void add_matrix_to_result_buffers();
+
+private:
+  virtual MapBaseComposition *pipe_impl(const MapBase &_that) const override {
+    return new MapBaseComposition({*this, _that});
+  }
+  virtual MapBaseComposition *pipe_move_impl(MapBase &&_that) const override {
+
+    return new MapBaseComposition({*this, _that});
+  }
 };
 
 } // namespace manifolds

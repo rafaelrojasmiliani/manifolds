@@ -35,6 +35,14 @@ detail::mixed_matrix_t MapBase::diff(const ManifoldBase &_in) const {
   return result;
 }
 
+std::unique_ptr<MapBase> MapBase::operator|(const MapBase &_in) const {
+  return std::unique_ptr<MapBase>(this->pipe_impl(_in));
+}
+
+std::unique_ptr<MapBase> MapBase::operator|(MapBase &&_in) const {
+  return std::unique_ptr<MapBase>(this->pipe_move_impl(std::move(_in)));
+}
+
 // return manifold buffers
 std::unique_ptr<ManifoldBase> MapBase::codomain_buffer() const {
   return std::unique_ptr<ManifoldBase>(codomain_buffer_impl());

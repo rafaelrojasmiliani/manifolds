@@ -27,6 +27,7 @@ public:
   ManifoldBase(const ManifoldBase &) = default;
   ManifoldBase(ManifoldBase &&) = default;
   ManifoldBase() = default;
+  virtual ~ManifoldBase() = default;
 
   virtual std::size_t get_dim() const = 0;
   virtual std::size_t get_tanget_repr_dim() const = 0;

@@ -32,12 +32,6 @@ public:
                          std::conditional_t<DT == detail::MatrixTypeId::Sparse,
                                             detail::sparse_matrix_ref_t,
                                             detail::mixed_matrix_ref_t>>;
-  // FIXME adapt to dynamic type
-  using differential_t = std::conditional_t<
-      DT == detail::MatrixTypeId::Dense,
-      detail::dense_matrix_t<codomain_t::tangent_repr_dimension,
-                             domain_t::tangent_repr_dimension>,
-      detail::sparse_matrix_t>;
 
   using map_t = Map<DomainType, CoDomainType, DT>;
 
@@ -76,10 +70,20 @@ public:
   // -------------------------------------------
 
   /// Constructor from a typed map
-  template <typename M> MapComposition(const M &m) : MapBaseComposition(m) {}
+  //template <typename M> MapComposition(const M &m) : MapBaseComposition(m) {}
+  template <typename M> MapComposition(const M &m) : MapBaseComposition(m) {
+
+    static_assert(std::is_base_of_v<MapBase, std::decay_t<M>>);
+    static_assert(std::is_same_v<typename M::codomain_t, codomain_t>);
+    static_assert(std::is_same_v<typename M::domain_t, domain_t>);
+  }
   /// Move-Constructor from a typed map
-  template <typename M>
-  MapComposition(M &&m) : MapBaseComposition(std::move(m)) {}
+  // template <typename M>
+  // MapComposition(M &&m) : MapBaseComposition(std::move(m)) {
+  //   static_assert(std::is_base_of_v<MapBase, std::decay_t<M>>);
+  //   static_assert(std::is_same_v<typename std::decay_t<M>::codomain_t, codomain_t>);
+  //   static_assert(std::is_same_v<typename std::decay_t<M>::domain_t, domain_t>);
+  // }
 
   /// Copy constructor from a typed map
   MapComposition(const MapComposition &m) : MapBaseComposition(m) {}
@@ -100,38 +104,20 @@ public:
     return *this;
   }
   // -------------------------------------------
-  // -------- Modifiers ------------------------
+  // -------- Compose ------------------------
   // -------------------------------------------
-  std::unique_ptr<MapBaseComposition>
-  pre_compose_ptr(const std::unique_ptr<MapBase> &_other) override {
-    auto foo = std::vector<std::unique_ptr<MapBase>>{};
-    foo.push_back(this->clone());
-    foo.push_back(_other->clone());
-    return std::make_unique<MapBaseComposition>(foo);
-  }
 
-  template <typename OtherDomainType, detail::MatrixTypeId OtherDT>
-  auto compose(const Map<OtherDomainType, DomainType, OtherDT> &_in) const & {
+  template <typename OtherCodomain, detail::MatrixTypeId OtherDT>
+  auto operator|(const Map<codomain_t, OtherCodomain, OtherDT> &_in) const & {
+
     constexpr detail::MatrixTypeId mt =
         (OtherDT == DT and DT == detail::MatrixTypeId::Sparse)
             ? detail::MatrixTypeId::Sparse
             : detail::MatrixTypeId::Dense;
-    MapBaseComposition result(*this);
-    result.append(_in);
 
-    return MapComposition<OtherDomainType, CoDomainType, mt>(result);
-  }
+    MapBaseComposition result({*this, _in});
 
-  template <typename OtherDomainType, detail::MatrixTypeId OtherDT>
-  auto
-  compose(MapComposition<OtherDomainType, DomainType, OtherDT> &&_in) const & {
-    constexpr detail::MatrixTypeId mt =
-        (OtherDT == DT and DT == detail::MatrixTypeId::Sparse)
-            ? detail::MatrixTypeId::Sparse
-            : detail::MatrixTypeId::Dense;
-    MapBaseComposition result(*this);
-    result.append(_in);
-    return MapComposition<OtherDomainType, CoDomainType, mt>(result);
+    return MapComposition<domain_t, OtherCodomain, mt>(result);
   }
 
 protected:
@@ -175,15 +161,23 @@ protected:
     if constexpr (domain_t::is_faithful) {
       DomainType m1 = DomainType::CRef(_in);
       return diff_impl(&m1, _mat);
-    }
-    return diff_impl(&_in, _mat);
+    }else
+      return diff_impl(&_in, _mat);
   }
   MapComposition() = default;
 
 private:
+  using MapBase::operator|;
   MapComposition(const MapBaseComposition &in) : MapBaseComposition(in) {}
 
   MapComposition(MapBaseComposition &&in) : MapBaseComposition(std::move(in)) {}
+
+  virtual MapBaseComposition *pipe_impl(const MapBase &_that) const override {
+    return new MapBaseComposition({*this, _that});
+  }
+  virtual MapBaseComposition *pipe_move_impl(MapBase &&_that) const override {
+    return new MapBaseComposition({*this, _that});
+  }
 };
 template <typename T>
 MapComposition(const T &m)

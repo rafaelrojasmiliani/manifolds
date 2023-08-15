@@ -77,7 +77,7 @@ public:
     that.owning_ = false;
   }
 
-  virtual ~Manifold() {
+  virtual ~Manifold() override{
     if (owning_)
       delete representation_;
     representation_ = nullptr;
@@ -349,12 +349,11 @@ public:
 
 protected:
   virtual Manifold *clone_impl() const override {
-
-    return new Manifold(*static_cast<const Manifold *>(this));
+    return new Manifold(*this);
   }
 
   virtual Manifold *move_clone_impl() override {
-    return new Manifold(std::move(*static_cast<Manifold *>(this)));
+    return new Manifold(std::move(*this));
   }
 };
 
