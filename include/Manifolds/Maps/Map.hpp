@@ -163,11 +163,14 @@ protected:
     const domain_facade_t *input_ptr = nullptr;
     codomain_facade_t *output_ptr = nullptr;
 
-    if constexpr (DomainType::is_faithful)
-      input_ptr = &static_cast<const DomainType *>(_in)->crepr();
-    else
+    if constexpr (DomainType::is_faithful) {
+      const DomainType *ptr = dynamic_cast<const DomainType *>(_in);
+      if (ptr == nullptr)
+        return false;
+      input_ptr = &ptr->crepr();
+    } else {
       input_ptr = static_cast<const DomainType *>(_in);
-
+    }
     if constexpr (CoDomainType::is_faithful)
       output_ptr = &static_cast<CoDomainType *>(_other)->repr();
     else

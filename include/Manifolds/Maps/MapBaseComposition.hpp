@@ -28,21 +28,9 @@ public:
   /// Move-cast constructor from a type agnostic map
   MapBaseComposition(MapBase &&_in);
 
-  /// Constructor from a pointer to a type agnostic map
-  explicit MapBaseComposition(const std::unique_ptr<MapBase> &_in);
-
-  /// Move-cast constructor from any type agnostic map
-  explicit MapBaseComposition(std::unique_ptr<MapBase> &&_in);
-
-  /// Construct from a vector of unique pointers to type agnostic maps
-  MapBaseComposition(const std::vector<std::unique_ptr<MapBase>> &_in);
-
   /// Construct from a vector of reference wrappers
   MapBaseComposition(
       const std::vector<std::reference_wrapper<const MapBase>> &_in);
-
-  /// Move-construct from a vector of unique pointers to type agnostic maps
-  MapBaseComposition(std::vector<std::unique_ptr<MapBase>> &&_in);
 
   /// Default destructor.
   virtual ~MapBaseComposition() = default;

@@ -80,84 +80,33 @@ void MapBaseComposition::fill_matrix_result_buffers() {
 // -------------------------------------------
 // -------- Live cycle -----------------------
 // -------------------------------------------
-MapBaseComposition::MapBaseComposition(const MapBaseComposition &_that) {
+MapBaseComposition::MapBaseComposition(const MapBaseComposition &_that)
+    : MapBase(), maps_(), codomain_buffers_() {
+
   for (const auto &map : _that.maps_) {
-    maps_.push_back(map->clone());
-    codomain_buffers_.push_back(map->codomain_buffer());
-    matrix_buffers_.emplace_back(map->linearization_buffer());
+    append(*map);
   }
-  fill_matrix_result_buffers();
 }
-MapBaseComposition::MapBaseComposition(MapBaseComposition &&_that) {
-  for (const auto &map : _that.maps_) {
-    codomain_buffers_.push_back(map->codomain_buffer());
-    matrix_buffers_.emplace_back(map->linearization_buffer());
-    maps_.push_back(map->move_clone());
-  }
-  fill_matrix_result_buffers();
-}
+
+MapBaseComposition::MapBaseComposition(MapBaseComposition &&_that)
+    : MapBase(), maps_(std::move(_that.maps_)),
+      codomain_buffers_(std::move(_that.codomain_buffers_)) {}
 
 MapBaseComposition::MapBaseComposition(const MapBase &_in)
     : MapBase(), maps_() {
-  maps_.push_back(_in.clone());
-  codomain_buffers_.push_back(_in.codomain_buffer());
-  matrix_buffers_.emplace_back(_in.linearization_buffer());
-  fill_matrix_result_buffers();
+  append(_in);
 }
 
-MapBaseComposition::MapBaseComposition(MapBase &&_in) : MapBase(), maps_() {
-  codomain_buffers_.push_back(_in.codomain_buffer());
-  matrix_buffers_.emplace_back(_in.linearization_buffer());
-  maps_.push_back(_in.move_clone());
-  fill_matrix_result_buffers();
-}
-
-MapBaseComposition::MapBaseComposition(
-    const std::vector<std::unique_ptr<MapBase>> &_in)
-    : MapBase(), maps_() {
-  for (const auto &map : _in) {
-    maps_.push_back(map->clone());
-    matrix_buffers_.emplace_back(map->linearization_buffer());
-    codomain_buffers_.push_back(map->codomain_buffer());
-  }
-  fill_matrix_result_buffers();
+MapBaseComposition::MapBaseComposition(MapBase &&_other) : MapBase(), maps_() {
+  append(std::move(_other));
 }
 
 MapBaseComposition::MapBaseComposition(
     const std::vector<std::reference_wrapper<const MapBase>> &_in)
-    : MapBase(), maps_() {
+    : MapBase(), maps_(), codomain_buffers_() {
   for (const auto &map : _in) {
     append(map.get());
   }
-}
-
-MapBaseComposition::MapBaseComposition(
-    std::vector<std::unique_ptr<MapBase>> &&_in)
-    : MapBase(), maps_() {
-  for (auto &map : _in) {
-    codomain_buffers_.push_back(map->codomain_buffer());
-    matrix_buffers_.emplace_back(map->linearization_buffer());
-    maps_.push_back(map->move_clone());
-  }
-  fill_matrix_result_buffers();
-}
-
-MapBaseComposition::MapBaseComposition(const std::unique_ptr<MapBase> &_in)
-    : MapBase(), maps_() {
-  maps_.push_back(_in->clone());
-  // Here, change to Variant of dense and sparse matrix
-  matrix_buffers_.emplace_back(_in->linearization_buffer());
-  codomain_buffers_.push_back(_in->codomain_buffer());
-  fill_matrix_result_buffers();
-}
-
-MapBaseComposition::MapBaseComposition(std::unique_ptr<MapBase> &&_in)
-    : MapBase(), maps_() {
-  codomain_buffers_.push_back(_in->codomain_buffer());
-  // Here, change to Variant of dense and sparse matrix
-  matrix_buffers_.emplace_back(_in->linearization_buffer());
-  maps_.push_back(_in->move_clone());
-  fill_matrix_result_buffers();
 }
 
 MapBaseComposition &
@@ -194,7 +143,6 @@ MapBaseComposition &MapBaseComposition::operator=(MapBaseComposition &&that) {
   // Here, change to Variant of dense and sparse matrix
   matrix_buffers_ = std::move(that.matrix_buffers_);
 
-  fill_matrix_result_buffers();
   return *this;
 }
 // ---------------------------------------------------------
@@ -211,7 +159,7 @@ MapBaseComposition &MapBaseComposition::operator=(MapBaseComposition &&that) {
 
 void MapBaseComposition::append(const MapBase &_in) {
 
-  if (maps_.size() > 1) {
+  if (maps_.size() >= 1) {
     codomain_buffers_.push_back(maps_.back()->codomain_buffer());
     matrix_buffers_.push_back(maps_.back()->linearization_buffer());
   }
@@ -222,16 +170,14 @@ void MapBaseComposition::append(const MapBase &_in) {
 }
 
 void MapBaseComposition::append(MapBase &&_in) {
-  if (maps_.size() > 1) {
+
+  if (maps_.size() >= 1) {
     codomain_buffers_.push_back(maps_.back()->codomain_buffer());
     matrix_buffers_.push_back(maps_.back()->linearization_buffer());
   }
-  if (maps_.size() > 2) {
-    matrix_result_buffers_.push_back(
-        get_diff_comp_buffer(*maps_.end()[-2], *maps_.end()[-1]));
-  }
 
   maps_.push_back(_in.move_clone());
+
   aux_codomain_buffers_ptr_.push_back(nullptr);
 }
 // -------------------------------------------
@@ -264,15 +210,14 @@ bool MapBaseComposition::value_impl(const ManifoldBase *_in,
     }
   }
 
-  return maps_.front()->value_impl(codomain_buffers_.back().get(), _out);
+  return maps_.back()->value_impl(codomain_buffers_.back().get(), _out);
 }
-// diff_0 diff_1 diff_2 ...    diff_{n-4} diff_{n-3} diff_{n-2} diff_{n-1}
-//                                                   \----------v-------/
-// diff_0 diff_1 diff_2 ...    diff_{n-4} diff_{n-3}  matrix_resu_ffers_[n-2]
-//                                                     \----------v----------/
-//  diff_0 diff_1 diff_2 ...    diff_{n-4}  matrix_result_buffers_[n-3]
-//                                          \----------v----------/
-//                                          matrix_result_buffers_[n-3]
+// diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
+//
+// diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
+//
+// diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
+//
 bool MapBaseComposition::diff_impl(const ManifoldBase *_in,
                                    detail::mixed_matrix_ref_t _mat) const {
   auto map_it = maps_.end();

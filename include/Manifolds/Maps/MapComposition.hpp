@@ -35,6 +35,10 @@ public:
 
   using map_t = Map<DomainType, CoDomainType, DT>;
 
+  template <typename A, typename B, detail::MatrixTypeId C> friend class Map;
+  template <typename A, typename B, detail::MatrixTypeId C>
+  friend class MapComposition;
+
   std::size_t get_dom_dim() const override {
     return MapBaseComposition::get_dom_dim();
   }
@@ -70,7 +74,7 @@ public:
   // -------------------------------------------
 
   /// Constructor from a typed map
-  //template <typename M> MapComposition(const M &m) : MapBaseComposition(m) {}
+  // template <typename M> MapComposition(const M &m) : MapBaseComposition(m) {}
   template <typename M> MapComposition(const M &m) : MapBaseComposition(m) {
 
     static_assert(std::is_base_of_v<MapBase, std::decay_t<M>>);
@@ -81,8 +85,9 @@ public:
   // template <typename M>
   // MapComposition(M &&m) : MapBaseComposition(std::move(m)) {
   //   static_assert(std::is_base_of_v<MapBase, std::decay_t<M>>);
-  //   static_assert(std::is_same_v<typename std::decay_t<M>::codomain_t, codomain_t>);
-  //   static_assert(std::is_same_v<typename std::decay_t<M>::domain_t, domain_t>);
+  //   static_assert(std::is_same_v<typename std::decay_t<M>::codomain_t,
+  //   codomain_t>); static_assert(std::is_same_v<typename
+  //   std::decay_t<M>::domain_t, domain_t>);
   // }
 
   /// Copy constructor from a typed map
@@ -115,7 +120,22 @@ public:
             ? detail::MatrixTypeId::Sparse
             : detail::MatrixTypeId::Dense;
 
-    MapBaseComposition result({*this, _in});
+    MapBaseComposition result(*this);
+    result.append(_in);
+
+    return MapComposition<domain_t, OtherCodomain, mt>(result);
+  }
+
+  template <typename OtherCodomain, detail::MatrixTypeId OtherDT>
+  auto operator|(const Map<codomain_t, OtherCodomain, OtherDT> &_in) && {
+
+    constexpr detail::MatrixTypeId mt =
+        (OtherDT == DT and DT == detail::MatrixTypeId::Sparse)
+            ? detail::MatrixTypeId::Sparse
+            : detail::MatrixTypeId::Dense;
+
+    MapBaseComposition result(std::move(*this));
+    result.append(_in);
 
     return MapComposition<domain_t, OtherCodomain, mt>(result);
   }
@@ -161,7 +181,7 @@ protected:
     if constexpr (domain_t::is_faithful) {
       DomainType m1 = DomainType::CRef(_in);
       return diff_impl(&m1, _mat);
-    }else
+    } else
       return diff_impl(&_in, _mat);
   }
   MapComposition() = default;
