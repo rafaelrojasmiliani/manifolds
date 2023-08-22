@@ -218,7 +218,7 @@ bool MapBaseComposition::value_impl(const ManifoldBase *_in,
 //
 // diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
 //
-bool MapBaseComposition::diff_impl(const ManifoldBase *_in,
+bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *,
                                    detail::mixed_matrix_ref_t _mat) const {
   auto map_it = maps_.end();
   auto codomain_it = codomain_buffers_.end();
@@ -233,74 +233,73 @@ bool MapBaseComposition::diff_impl(const ManifoldBase *_in,
 
   (*map_it)->value_impl(_in, codomain_it->get());
 
-  std::visit(
-      [&](auto &&arg) {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
-          (*map_it)->diff_impl(_in, std::get<0>(*matrix_it));
-        else if constexpr (std::is_same_v<T, Eigen::SparseMatrix<double>>) {
-          (*map_it)->diff_impl(_in, std::get<1>(*matrix_it));
-        } else {
-          throw std::logic_error("cannot be here");
-        }
-      },
-      *matrix_it);
+  //       using T = std::decay_t<decltype(arg)>;
+  //       if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
+  //         (*map_it)->diff_impl(_in, std::get<0>(*matrix_it));
+  //       else if constexpr (std::is_same_v<T, Eigen::SparseMatrix<double>>) {
+  //         (*map_it)->diff_impl(_in, std::get<1>(*matrix_it));
+  //       } else {
+  //         throw std::logic_error("cannot be here");
+  //       }
+  //     },
+  //     *matrix_it);
 
-  if (maps_.size() == 1) {
-    std::get<0>(_mat) = std::get<0>(*matrix_it);
-    return true;
-  }
+  // if (maps_.size() == 1) {
+  //   std::get<0>(_mat) = std::get<0>(*matrix_it);
+  //   return true;
+  // }
 
-  while (map_it != maps_.begin()) {
-    auto domain_it = codomain_it;
-    --map_it;
-    --codomain_it;
-    --matrix_it;
-    (*map_it)->value(*domain_it, *codomain_it);
+  // while (map_it != maps_.begin()) {
+  //   auto domain_it = codomain_it;
+  //   --map_it;
+  //   --codomain_it;
+  //   --matrix_it;
+  //   (*map_it)->value(*domain_it, *codomain_it);
 
-    // Here we load the buffer for the differential of the function
-    std::visit(
-        [&](auto &&arg) {
-          using T = std::decay_t<decltype(arg)>;
-          if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
-            (*map_it)->diff(**domain_it, std::get<0>(*matrix_it));
-          else if constexpr (std::is_same_v<T, Eigen::SparseMatrix<double>>) {
-            (*map_it)->diff(**domain_it, std::get<1>(*matrix_it));
-          } else {
-            throw std::logic_error("cannot be here");
-          }
-        },
-        *matrix_it);
+  //   // Here we load the buffer for the differential of the function
+  //   std::visit(
+  //       [&](auto &&arg) {
+  //         using T = std::decay_t<decltype(arg)>;
+  //         if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
+  //           (*map_it)->diff(**domain_it, std::get<0>(*matrix_it));
+  //         else if constexpr (std::is_same_v<T, Eigen::SparseMatrix<double>>)
+  //         {
+  //           (*map_it)->diff(**domain_it, std::get<1>(*matrix_it));
+  //         } else {
+  //           throw std::logic_error("cannot be here");
+  //         }
+  //       },
+  //       *matrix_it);
 
-    // Here we accumulate in the accumulation buffer
-    if (matrix_result_it == std::prev(matrix_result_buffers_.end(), 1)) {
-      std::visit(
-          [&](auto &&m1, auto &&m2) {
-            using T1 = std::decay_t<decltype(m1)>;
-            using T2 = std::decay_t<decltype(m2)>;
-            if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
-                          std::is_same_v<T2, Eigen::MatrixXd>)
-              std::get<0>(*matrix_result_it) = m1 * m2;
-            else
-              std::get<1>(*matrix_result_it) = m1 * m2;
-          },
-          *matrix_it, *matrix_it_prev);
-    } else {
-      std::visit(
-          [&](auto &&m1, auto &&m2) {
-            using T1 = std::decay_t<decltype(m1)>;
-            using T2 = std::decay_t<decltype(m2)>;
-            if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
-                          std::is_same_v<T2, Eigen::MatrixXd>)
-              std::get<0>(*matrix_result_it) = m1 * m2;
-            else
-              std::get<1>(*matrix_result_it) = m1 * m2;
-          },
-          *matrix_it, *(matrix_result_it + 1));
-    }
-    --matrix_it_prev;
-    --matrix_result_it;
-  }
+  //   // Here we accumulate in the accumulation buffer
+  //   if (matrix_result_it == std::prev(matrix_result_buffers_.end(), 1)) {
+  //     std::visit(
+  //         [&](auto &&m1, auto &&m2) {
+  //           using T1 = std::decay_t<decltype(m1)>;
+  //           using T2 = std::decay_t<decltype(m2)>;
+  //           if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
+  //                         std::is_same_v<T2, Eigen::MatrixXd>)
+  //             std::get<0>(*matrix_result_it) = m1 * m2;
+  //           else
+  //             std::get<1>(*matrix_result_it) = m1 * m2;
+  //         },
+  //         *matrix_it, *matrix_it_prev);
+  //   } else {
+  //     std::visit(
+  //         [&](auto &&m1, auto &&m2) {
+  //           using T1 = std::decay_t<decltype(m1)>;
+  //           using T2 = std::decay_t<decltype(m2)>;
+  //           if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
+  //                         std::is_same_v<T2, Eigen::MatrixXd>)
+  //             std::get<0>(*matrix_result_it) = m1 * m2;
+  //           else
+  //             std::get<1>(*matrix_result_it) = m1 * m2;
+  //         },
+  //         *matrix_it, *(matrix_result_it + 1));
+  //   }
+  //   --matrix_it_prev;
+  //   --matrix_result_it;
+  // }
 
   std::get<0>(_mat) = std::get<0>(matrix_result_buffers_.front());
   return true;

@@ -91,13 +91,15 @@ public:
   // ---------------------------------
   // Definition of bool diff(in, out)
   // ---------------------------------
-  bool diff(const domain_facade_t &_in, differential_ref_t _out) const {
-    return diff_from_repr(_in, _out);
+  bool diff(const domain_facade_t &_in, codomain_facade_t &_value,
+            differential_ref_t _out) const {
+    return diff_from_repr(_in, _value, _out);
   }
 
   differential_t diff(const domain_facade_t &_in) const {
     differential_t out;
-    diff_from_repr(_in, out);
+    static codomain_t codom;
+    diff_from_repr(_in, codom, out);
     return out;
   }
 
@@ -181,21 +183,27 @@ protected:
 
   /// Implementation of differentiation of for MapBase. This is a
   /// representaton-agnostic evaluation.
-  bool diff_impl(const ManifoldBase *_in,
+  bool diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
                  detail::mixed_matrix_ref_t _mat) const override {
 
     const domain_facade_t *input_ptr = nullptr;
+    codomain_facade_t *output_ptr = nullptr;
 
     if constexpr (DomainType::is_faithful)
       input_ptr = &static_cast<const DomainType *>(_in)->crepr();
     else
       input_ptr = static_cast<const DomainType *>(_in);
 
+    if constexpr (CoDomainType::is_faithful)
+      output_ptr = &static_cast<CoDomainType *>(_out)->repr();
+    else
+      output_ptr = static_cast<CoDomainType *>(_out);
+
     if constexpr (DT == detail::MatrixTypeId::Dense)
-      return diff_from_repr(*input_ptr,
+      return diff_from_repr(*input_ptr, *output_ptr,
                             std::get<detail::dense_matrix_ref_t>(_mat));
     if constexpr (DT == detail::MatrixTypeId::Sparse)
-      return diff_from_repr(*input_ptr,
+      return diff_from_repr(*input_ptr, *output_ptr,
                             std::get<detail::sparse_matrix_ref_t>(_mat).get());
   }
 
@@ -220,6 +228,7 @@ protected:
   /// Function to copmute the result of the map differential using just the
   /// representation types
   virtual bool diff_from_repr(const domain_facade_t &_in,
+                              codomain_facade_t &_out,
                               differential_ref_t _mat) const = 0;
 
   virtual Map *clone_impl() const override = 0;
@@ -258,8 +267,10 @@ protected:
     _result = _in;
     return true;
   }
-  bool diff_from_repr(const typename Set::Representation &,
+  bool diff_from_repr(const typename Set::Representation &_in,
+                      const typename Set::Representation &_result_1,
                       Eigen::Ref<Eigen::MatrixXd>) const override {
+    _result_1 = _in;
     return true;
   }
 };
@@ -289,6 +300,7 @@ public:
   }
 
   bool diff_from_repr(const typename base_t::domain_facade_t &_in,
+                      typename base_t::codomain_facade_t &,
                       typename base_t::differential_ref_t _mat) const override {
     return diff_fun_(_in, _mat);
   }

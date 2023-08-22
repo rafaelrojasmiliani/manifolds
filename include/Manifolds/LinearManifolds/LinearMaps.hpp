@@ -60,6 +60,7 @@ public:
   }
 
   virtual bool diff_from_repr(const typename base_t::domain_facade_t &,
+                              typename base_t::codomain_facade_t &,
                               detail::dense_matrix_ref_t _mat) const override {
     _mat = this->crepr();
     return true;
@@ -119,6 +120,7 @@ public:
   }
 
   virtual bool diff_from_repr(const typename base_t::domain_facade_t &,
+                              typename base_t::codomain_facade_t &,
                               detail::sparse_matrix_ref_t _mat) const override {
     _mat.get() = this->crepr();
     return true;

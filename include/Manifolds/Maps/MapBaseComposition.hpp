@@ -104,7 +104,7 @@ protected:
 
   bool value_impl(const ManifoldBase *_in, ManifoldBase *_other) const override;
 
-  bool diff_impl(const ManifoldBase *_in,
+  bool diff_impl(const ManifoldBase *_in, ManifoldBase *,
                  detail::mixed_matrix_ref_t _mat) const override;
 
   ManifoldBase *domain_buffer_impl() const override;

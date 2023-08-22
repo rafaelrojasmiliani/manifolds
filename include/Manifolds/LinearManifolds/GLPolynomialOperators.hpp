@@ -359,6 +359,7 @@ public:
 
   Composition(const Composition &_that) { map_ = _that.map_->clone(); }
   Composition(Composition &&_that) { map_ = _that.map_->move_clone(); }
+
   bool
   value_on_repr(const PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> &in,
                 PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension>
@@ -376,6 +377,7 @@ public:
 
   virtual bool diff_from_repr(
       const PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> &in,
+      PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension> &,
       std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>> _mat)
       const override {
 
@@ -383,8 +385,9 @@ public:
 
     int i0 = 0;
     int j0 = 0;
+    OtherCoDomain buff;
     for (std::size_t point_index = 0; point_index < in.size(); point_index++) {
-      map_->diff(in[point_index], mat);
+      map_->diff(in[point_index], buff, mat);
       for (std::size_t i = 0; i < OtherCoDomain::dimension; i++)
         for (std::size_t j = 0; j < CoDomainDim; j++)
           _mat.get().coeffRef(i0 + i, j0 + j) = mat(i, j);

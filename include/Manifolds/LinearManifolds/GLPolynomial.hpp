@@ -143,7 +143,7 @@ public:
 
     for (std::size_t i = 0; i < CoDomainDim; i++) {
 
-      Eigen::Ref<const Eigen::Vector<double, CoDomainDim *NumPoints>> aux_vec =
+      Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
 
@@ -154,13 +154,16 @@ public:
   }
 
   virtual bool diff_from_repr(const double &_in,
+                              Eigen::Vector<double, CoDomainDim> &out,
                               detail::dense_matrix_ref_t _mat) const override {
+
+    value_on_repr(_in, out);
 
     auto [interval, s] =
         this->domain_partition_.subinterval_index_and_canonic_value(_in);
     for (std::size_t i = 0; i < CoDomainDim; i++) {
 
-      Eigen::Ref<const Eigen::Vector<double, CoDomainDim *NumPoints>> aux_vec =
+      Eigen::Ref<const Eigen::Vector<double, CoDomainDim * NumPoints>> aux_vec =
           this->crepr().template segment<NumPoints * CoDomainDim>(
               NumPoints * CoDomainDim * interval);
 
@@ -556,6 +559,7 @@ public:
   }
 
   virtual bool diff_from_repr(const double &,
+                              Eigen::Vector<double, CoDomainDim> &,
                               Eigen::Ref<Eigen::MatrixXd>) const override {
 
     return true;

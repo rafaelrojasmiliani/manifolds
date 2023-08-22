@@ -54,7 +54,7 @@ public:
     PYBIND11_OVERRIDE_PURE(bool, MapBase, value_impl);
   }
 
-  virtual bool diff_impl(const ManifoldBase *,
+  virtual bool diff_impl(const ManifoldBase *, ManifoldBase *,
                          detail::mixed_matrix_ref_t) const override {
 
     PYBIND11_OVERRIDE_PURE(bool, MapBase, diff_impl);
@@ -80,9 +80,11 @@ public:
   /// representation types
   virtual bool
   diff_from_repr(const typename M::domain_facade_t &_in,
+                 typename M::codomain_facade_t &_out,
                  typename M::differential_ref_t _mat) const override {
 
-    PYBIND11_OVERRIDE_PURE(bool, MapTrampoline, diff_from_repr, _in, _mat);
+    PYBIND11_OVERRIDE_PURE(bool, MapTrampoline, diff_from_repr, _in, _out,
+                           _mat);
   }
 
   virtual M *clone_impl() const override {

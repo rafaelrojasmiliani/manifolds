@@ -148,9 +148,9 @@ protected:
                   ManifoldBase *_other) const override {
     return MapBaseComposition::value_impl(_in, _other);
   }
-  bool diff_impl(const ManifoldBase *_in,
+  bool diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
                  detail::mixed_matrix_ref_t _mat) const override {
-    return MapBaseComposition::diff_impl(_in, _mat);
+    return MapBaseComposition::diff_impl(_in, _out, _mat);
   }
   virtual MapComposition *clone_impl() const override {
     return new MapComposition(*this);
@@ -176,13 +176,13 @@ protected:
     } else
       return value_impl(&_in, &_out);
   }
-  virtual bool diff_from_repr(const domain_facade_t &_in,
+  virtual bool diff_from_repr(const domain_facade_t &_in, codomain_facade_t &,
                               differential_ref_t _mat) const override {
     if constexpr (domain_t::is_faithful) {
       DomainType m1 = DomainType::CRef(_in);
-      return diff_impl(&m1, _mat);
+      return diff_impl(&m1, nullptr, _mat);
     } else
-      return diff_impl(&_in, _mat);
+      return diff_impl(&_in, nullptr, _mat);
   }
   MapComposition() = default;
 

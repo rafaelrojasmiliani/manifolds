@@ -18,7 +18,7 @@ protected:
   virtual bool value_impl(const ManifoldBase *_in,
                           ManifoldBase *_other) const = 0;
   // Here, change to Variant of dense and sparse matrix
-  virtual bool diff_impl(const ManifoldBase *_in,
+  virtual bool diff_impl(const ManifoldBase *_in, ManifoldBase *,
                          detail::mixed_matrix_ref_t _mat) const = 0;
 
 public:

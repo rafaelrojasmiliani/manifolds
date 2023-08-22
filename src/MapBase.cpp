@@ -27,11 +27,11 @@ std::unique_ptr<MapBase> MapBase::move_clone() {
 
 bool MapBase::diff(const ManifoldBase &_in,
                    detail::mixed_matrix_ref_t _mat) const {
-  return diff_impl(&_in, _mat);
+  return diff_impl(&_in, nullptr, _mat);
 }
 detail::mixed_matrix_t MapBase::diff(const ManifoldBase &_in) const {
   auto result = this->linearization_buffer();
-  diff_impl(&_in, detail::mixed_matrix_to_ref(result));
+  diff_impl(&_in, nullptr, detail::mixed_matrix_to_ref(result));
   return result;
 }
 
