@@ -143,7 +143,12 @@ public:
     return CoDomainType::tangent_repr_dimension;
   }
 
-  detail::mixed_matrix_t linearization_buffer() const override {
+  detail::mixed_matrix_t mixed_linearization_buffer() const override {
+    // FIXME adapt to dynamic type
+    return linearization_buffer();
+  }
+
+  differential_t linearization_buffer() const {
     // FIXME adapt to dynamic type
     if constexpr (DT == detail::MatrixTypeId::Dense)
       return Eigen::MatrixXd(codomain_t::tangent_repr_dimension,
@@ -151,6 +156,7 @@ public:
     return detail::sparse_matrix_t(codomain_t::tangent_repr_dimension,
                                    domain_t::tangent_repr_dimension);
   }
+
   virtual detail::MatrixTypeId differential_type() const override { return DT; }
 
 protected:

@@ -61,7 +61,7 @@ public:
     return map_t::codomain_buffer_impl();
   }
 
-  detail::mixed_matrix_t linearization_buffer() const override {
+  detail::mixed_matrix_t mixed_linearization_buffer() const override {
     // FIXME adapt to dynamic type
     if constexpr (DT == detail::MatrixTypeId::Dense)
       return Eigen::MatrixXd(codomain_t::tangent_repr_dimension,
@@ -214,10 +214,10 @@ private:
 
 template <typename T>
 MapComposition(const T &m)
-    -> MapComposition<typename T::domain, typename T::codomain,
+    -> MapComposition<typename T::domain_t, typename T::codomain_t,
                       T::differential_type_id>;
 template <typename T>
 MapComposition(T &&m)
-    -> MapComposition<typename T::domain, typename T::codomain,
+    -> MapComposition<typename T::domain_t, typename T::codomain_t,
                       T::differential_type_id>;
 } // namespace manifolds

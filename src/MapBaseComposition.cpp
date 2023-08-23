@@ -159,24 +159,26 @@ void MapBaseComposition::append(const MapBase &_in) {
 
   if (maps_.size() >= 1) {
     codomain_buffers_.push_back(maps_.back()->codomain_buffer());
-    matrix_buffers_.push_back(maps_.back()->linearization_buffer());
+    if (maps_.size() == 1) {
+      matrix_buffers_.push_back(maps_.back()->mixed_linearization_buffer());
+    }
+    matrix_buffers_.push_back(_in.mixed_linearization_buffer());
   }
 
   maps_.push_back(_in.clone());
-
-  aux_codomain_buffers_ptr_.push_back(nullptr);
 }
 
 void MapBaseComposition::append(MapBase &&_in) {
 
   if (maps_.size() >= 1) {
     codomain_buffers_.push_back(maps_.back()->codomain_buffer());
-    matrix_buffers_.push_back(maps_.back()->linearization_buffer());
+    if (maps_.size() == 1) {
+      matrix_buffers_.push_back(maps_.back()->mixed_linearization_buffer());
+    }
+    matrix_buffers_.push_back(_in.mixed_linearization_buffer());
   }
 
   maps_.push_back(_in.move_clone());
-
-  aux_codomain_buffers_ptr_.push_back(nullptr);
 }
 // -------------------------------------------
 // -------- Interface  -----------------------
@@ -210,14 +212,19 @@ bool MapBaseComposition::value_impl(const ManifoldBase *_in,
 }
 // diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
 //
-// diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
+// 1. buffer = diff_0
+// 2. buffer = diff_1 * buffer
+// 3. buffer = diff_2 * buffer
 //
-// diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
+//
 //
 bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
                                    detail::mixed_matrix_ref_t _mat) const {
 
-  Eigen::MatrixXd buff;
+  Eigen::MatrixXd dense_buffer;
+  detail::sparse_matrix_t sparse_buffer;
+
+  detail::mixed_matrix_ref_t current_buffer{dense_buffer};
 
   if (maps_.size() == 1) {
     return maps_.front()->diff_impl(_in, _out, _mat);
@@ -227,10 +234,27 @@ bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
       _in, codomain_buffers_.front().get(),
       detail::mixed_matrix_to_ref(matrix_buffers_.front()));
 
+  if (maps_.front()->differential_type() == detail::MatrixTypeId::Sparse)
+    current_buffer = sparse_buffer;
+
   for (std::size_t i = 1; i < maps_.size() - 1; i++) {
     bool res = maps_[i]->diff_impl(
         codomain_buffers_[i - 1].get(), codomain_buffers_[i].get(),
         detail::mixed_matrix_to_ref(matrix_buffers_[i]));
+
+    if (not detail::mixed_matrix_ref_has_sparse(current_buffer) or
+        maps_[i]->differential_type() != detail::MatrixTypeId::Sparse)
+      current_buffer = dense_buffer;
+
+    if (i == 1) {
+      detail::mixed_matrix_ref_mul(
+          detail::mixed_matrix_to_ref(matrix_buffers_[i]),
+          detail::mixed_matrix_to_ref(matrix_buffers_[i - 1]), current_buffer);
+    } else {
+      detail::mixed_matrix_ref_mul(
+          detail::mixed_matrix_to_ref(matrix_buffers_[i]), current_buffer,
+          current_buffer);
+    }
 
     if (not res) {
       return res;
@@ -240,6 +264,16 @@ bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
   bool res = maps_.back()->diff_impl(
       codomain_buffers_.back().get(), _out,
       detail::mixed_matrix_to_ref(matrix_buffers_.back()));
+
+  if (maps_.size() == 2) {
+    detail::mixed_matrix_ref_mul(
+        detail::mixed_matrix_to_ref(matrix_buffers_[1]),
+        detail::mixed_matrix_to_ref(matrix_buffers_[0]), current_buffer);
+  } else {
+    detail::mixed_matrix_ref_mul(
+        detail::mixed_matrix_to_ref(matrix_buffers_.back()), current_buffer,
+        current_buffer);
+  }
   return res;
 }
 

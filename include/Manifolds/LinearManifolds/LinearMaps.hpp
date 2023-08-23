@@ -59,9 +59,10 @@ public:
     return true;
   }
 
-  virtual bool diff_from_repr(const typename base_t::domain_facade_t &,
-                              typename base_t::codomain_facade_t &,
+  virtual bool diff_from_repr(const typename base_t::domain_facade_t &_in,
+                              typename base_t::codomain_facade_t &_out,
                               detail::dense_matrix_ref_t _mat) const override {
+    this->value_on_repr(_in, _out);
     _mat = this->crepr();
     return true;
   }
@@ -119,9 +120,10 @@ public:
     return true;
   }
 
-  virtual bool diff_from_repr(const typename base_t::domain_facade_t &,
-                              typename base_t::codomain_facade_t &,
+  virtual bool diff_from_repr(const typename base_t::domain_facade_t &_in,
+                              typename base_t::codomain_facade_t &_out,
                               detail::sparse_matrix_ref_t _mat) const override {
+    this->value_on_repr(_in, _out);
     _mat.get() = this->crepr();
     return true;
   }

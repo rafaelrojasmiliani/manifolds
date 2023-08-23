@@ -59,7 +59,7 @@ public:
 
   std::unique_ptr<MapBase> operator|(MapBase &&) const;
 
-  virtual detail::mixed_matrix_t linearization_buffer() const = 0;
+  virtual detail::mixed_matrix_t mixed_linearization_buffer() const = 0;
   virtual detail::MatrixTypeId differential_type() const = 0;
 
 protected:

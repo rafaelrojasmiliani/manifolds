@@ -42,7 +42,7 @@ public:
   virtual std::size_t get_codom_tangent_repr_dim() const override {
     PYBIND11_OVERRIDE_PURE(std::size_t, MapBase, get_codom_tangent_repr_dim);
   }
-  virtual detail::mixed_matrix_t linearization_buffer() const override {
+  virtual detail::mixed_matrix_t mixed_linearization_buffer() const override {
     PYBIND11_OVERRIDE_PURE(detail::mixed_matrix_t, MapBase,
                            linearization_buffer);
   }

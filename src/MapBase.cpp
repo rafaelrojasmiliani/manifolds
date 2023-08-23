@@ -30,7 +30,7 @@ bool MapBase::diff(const ManifoldBase &_in,
   return diff_impl(&_in, nullptr, _mat);
 }
 detail::mixed_matrix_t MapBase::diff(const ManifoldBase &_in) const {
-  auto result = this->linearization_buffer();
+  auto result = this->mixed_linearization_buffer();
   diff_impl(&_in, nullptr, detail::mixed_matrix_to_ref(result));
   return result;
 }

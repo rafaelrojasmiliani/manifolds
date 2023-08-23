@@ -66,7 +66,7 @@ public:
   std::size_t get_dom_tangent_repr_dim() const override;
   std::size_t get_codom_tangent_repr_dim() const override;
 
-  detail::mixed_matrix_t linearization_buffer() const override {
+  detail::mixed_matrix_t mixed_linearization_buffer() const override {
     if (differential_type() == detail::MatrixTypeId::Sparse) {
       return detail::sparse_matrix_t(get_codom_tangent_repr_dim(),
                                      get_dom_tangent_repr_dim());
