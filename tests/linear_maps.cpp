@@ -2,10 +2,7 @@
 #include "Test.h"
 #include <Eigen/Core>
 #include <Manifolds/LinearManifolds/LinearMaps.hpp>
-#include <algorithm>
 #include <gtest/gtest.h>
-#include <iostream>
-#include <memory>
 
 using namespace manifolds;
 /// Test properties of LinearMaps

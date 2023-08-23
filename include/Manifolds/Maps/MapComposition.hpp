@@ -176,13 +176,24 @@ protected:
     } else
       return value_impl(&_in, &_out);
   }
-  virtual bool diff_from_repr(const domain_facade_t &_in, codomain_facade_t &,
+
+  virtual bool diff_from_repr(const domain_facade_t &_in,
+                              codomain_facade_t &_out,
                               differential_ref_t _mat) const override {
-    if constexpr (domain_t::is_faithful) {
-      DomainType m1 = DomainType::CRef(_in);
-      return diff_impl(&m1, nullptr, _mat);
+    if constexpr (domain_t::is_faithful and codomain_t::is_faithful) {
+      domain_t dom = domain_t::CRef(_in);
+      codomain_t codom = codomain_t::Ref(_out);
+      return diff_impl(&dom, &codom, _mat);
+    } else if constexpr (domain_t::is_faithful and
+                         not codomain_t::is_faithful) {
+      domain_t dom = domain_t::CRef(_in);
+      return diff_impl(&dom, &_out, _mat);
+    } else if constexpr (not domain_t::is_faithful and
+                         codomain_t::is_faithful) {
+      codomain_t codom = codomain_t::Ref(_out);
+      return diff_impl(&_in, &codom, _mat);
     } else
-      return diff_impl(&_in, nullptr, _mat);
+      return diff_impl(&_in, &_out, _mat);
   }
   MapComposition() = default;
 
@@ -195,10 +206,12 @@ private:
   virtual MapBaseComposition *pipe_impl(const MapBase &_that) const override {
     return new MapBaseComposition({*this, _that});
   }
+
   virtual MapBaseComposition *pipe_move_impl(MapBase &&_that) const override {
     return new MapBaseComposition({*this, _that});
   }
 };
+
 template <typename T>
 MapComposition(const T &m)
     -> MapComposition<typename T::domain, typename T::codomain,

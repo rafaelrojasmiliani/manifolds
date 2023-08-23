@@ -6,8 +6,6 @@
 #include <Manifolds/Maps/MapComposition.hpp>
 
 #include <Eigen/Core>
-#include <algorithm>
-#include <list>
 #include <memory>
 
 namespace manifolds {
@@ -127,7 +125,6 @@ public:
     return DomainType::dimension;
   }
   virtual std::size_t get_codom_dim() const override {
-    std::cout << "\n----  here -\n\n;";
     // if (CoDomainType::dim == Eigen::Dynamic)
     //    throw std::invalid_input
     // FIXME adapt to dynamic type

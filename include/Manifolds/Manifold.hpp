@@ -2,8 +2,6 @@
 #include <Eigen/Core>
 #include <Manifolds/Detail.hpp>
 #include <Manifolds/ManifoldBase.hpp>
-#include <exception>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -77,7 +75,7 @@ public:
     that.owning_ = false;
   }
 
-  virtual ~Manifold() override{
+  virtual ~Manifold() override {
     if (owning_)
       delete representation_;
     representation_ = nullptr;
@@ -348,9 +346,7 @@ public:
   }
 
 protected:
-  virtual Manifold *clone_impl() const override {
-    return new Manifold(*this);
-  }
+  virtual Manifold *clone_impl() const override { return new Manifold(*this); }
 
   virtual Manifold *move_clone_impl() override {
     return new Manifold(std::move(*this));

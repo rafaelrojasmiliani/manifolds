@@ -1,8 +1,6 @@
 #include <Manifolds/Maps/MapBaseComposition.hpp>
-#include <cassert>
 #include <cstddef>
 #include <functional>
-#include <iostream>
 #include <stdexcept>
 namespace manifolds {
 
@@ -200,8 +198,6 @@ bool MapBaseComposition::value_impl(const ManifoldBase *_in,
 
   maps_.front()->value_impl(_in, codomain_buffers_.front().get());
 
-  std::vector<ManifoldBase *> buffers;
-
   for (std::size_t i = 1; i < maps_.size() - 1; i++) {
     bool res = maps_[i]->value_impl(codomain_buffers_[i - 1].get(),
                                     codomain_buffers_[i].get());
@@ -218,91 +214,33 @@ bool MapBaseComposition::value_impl(const ManifoldBase *_in,
 //
 // diff_{n-1} diff_{n-2} diff_{n-3} ...    diff_3 diff_2 diff_1 diff_0
 //
-bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *,
+bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
                                    detail::mixed_matrix_ref_t _mat) const {
-  auto map_it = maps_.end();
-  auto codomain_it = codomain_buffers_.end();
-  auto matrix_it = matrix_buffers_.end();
-  auto matrix_it_prev = matrix_buffers_.end();
-  auto matrix_result_it = matrix_result_buffers_.end();
-  map_it = std::prev(map_it, 1);
-  codomain_it = std::prev(codomain_it, 1);
-  matrix_it = std::prev(matrix_it, 1);
-  matrix_it_prev = std::prev(matrix_it_prev, 1);
-  matrix_result_it = std::prev(matrix_result_it, 1);
 
-  (*map_it)->value_impl(_in, codomain_it->get());
+  Eigen::MatrixXd buff;
 
-  //       using T = std::decay_t<decltype(arg)>;
-  //       if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
-  //         (*map_it)->diff_impl(_in, std::get<0>(*matrix_it));
-  //       else if constexpr (std::is_same_v<T, Eigen::SparseMatrix<double>>) {
-  //         (*map_it)->diff_impl(_in, std::get<1>(*matrix_it));
-  //       } else {
-  //         throw std::logic_error("cannot be here");
-  //       }
-  //     },
-  //     *matrix_it);
+  if (maps_.size() == 1) {
+    return maps_.front()->diff_impl(_in, _out, _mat);
+  }
 
-  // if (maps_.size() == 1) {
-  //   std::get<0>(_mat) = std::get<0>(*matrix_it);
-  //   return true;
-  // }
+  maps_.front()->diff_impl(
+      _in, codomain_buffers_.front().get(),
+      detail::mixed_matrix_to_ref(matrix_buffers_.front()));
 
-  // while (map_it != maps_.begin()) {
-  //   auto domain_it = codomain_it;
-  //   --map_it;
-  //   --codomain_it;
-  //   --matrix_it;
-  //   (*map_it)->value(*domain_it, *codomain_it);
+  for (std::size_t i = 1; i < maps_.size() - 1; i++) {
+    bool res = maps_[i]->diff_impl(
+        codomain_buffers_[i - 1].get(), codomain_buffers_[i].get(),
+        detail::mixed_matrix_to_ref(matrix_buffers_[i]));
 
-  //   // Here we load the buffer for the differential of the function
-  //   std::visit(
-  //       [&](auto &&arg) {
-  //         using T = std::decay_t<decltype(arg)>;
-  //         if constexpr (std::is_same_v<T, Eigen::MatrixXd>)
-  //           (*map_it)->diff(**domain_it, std::get<0>(*matrix_it));
-  //         else if constexpr (std::is_same_v<T, Eigen::SparseMatrix<double>>)
-  //         {
-  //           (*map_it)->diff(**domain_it, std::get<1>(*matrix_it));
-  //         } else {
-  //           throw std::logic_error("cannot be here");
-  //         }
-  //       },
-  //       *matrix_it);
+    if (not res) {
+      return res;
+    }
+  }
 
-  //   // Here we accumulate in the accumulation buffer
-  //   if (matrix_result_it == std::prev(matrix_result_buffers_.end(), 1)) {
-  //     std::visit(
-  //         [&](auto &&m1, auto &&m2) {
-  //           using T1 = std::decay_t<decltype(m1)>;
-  //           using T2 = std::decay_t<decltype(m2)>;
-  //           if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
-  //                         std::is_same_v<T2, Eigen::MatrixXd>)
-  //             std::get<0>(*matrix_result_it) = m1 * m2;
-  //           else
-  //             std::get<1>(*matrix_result_it) = m1 * m2;
-  //         },
-  //         *matrix_it, *matrix_it_prev);
-  //   } else {
-  //     std::visit(
-  //         [&](auto &&m1, auto &&m2) {
-  //           using T1 = std::decay_t<decltype(m1)>;
-  //           using T2 = std::decay_t<decltype(m2)>;
-  //           if constexpr (std::is_same_v<T1, Eigen::MatrixXd> ||
-  //                         std::is_same_v<T2, Eigen::MatrixXd>)
-  //             std::get<0>(*matrix_result_it) = m1 * m2;
-  //           else
-  //             std::get<1>(*matrix_result_it) = m1 * m2;
-  //         },
-  //         *matrix_it, *(matrix_result_it + 1));
-  //   }
-  //   --matrix_it_prev;
-  //   --matrix_result_it;
-  // }
-
-  std::get<0>(_mat) = std::get<0>(matrix_result_buffers_.front());
-  return true;
+  bool res = maps_.back()->diff_impl(
+      codomain_buffers_.back().get(), _out,
+      detail::mixed_matrix_to_ref(matrix_buffers_.back()));
+  return res;
 }
 
 ManifoldBase *MapBaseComposition::domain_buffer_impl() const {
