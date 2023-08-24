@@ -82,6 +82,9 @@ inline Eigen::MatrixXd &mixed_matrix_to_dense(mixed_matrix_t &mm) {
 inline bool mixed_matrix_ref_has_sparse(mixed_matrix_ref_t mr) {
   return std::holds_alternative<sparse_matrix_ref_t>(mr);
 }
+inline bool mixed_matrix_has_sparse(mixed_matrix_t mr) {
+  return std::holds_alternative<sparse_matrix_t>(mr);
+}
 
 inline void mixed_matrix_ref_mul(mixed_matrix_ref_t _m1, mixed_matrix_ref_t _m2,
                                  mixed_matrix_ref_t result) {
@@ -112,6 +115,99 @@ inline void mixed_matrix_ref_mul(mixed_matrix_ref_t _m1, mixed_matrix_ref_t _m2,
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<dense_matrix_ref_t>(result) = m1 * m2;
+        }
+      },
+      _m1, _m2);
+}
+
+inline void mixed_matrix_mul(mixed_matrix_t &_m1, mixed_matrix_t &_m2,
+                             mixed_matrix_t &result) {
+  std::visit(
+      [&](auto &&m1, auto &&m2) {
+        using m1_t = std::decay_t<decltype(m1)>;
+        using m2_t = std::decay_t<decltype(m2)>;
+
+        if constexpr (std::is_same_v<m1_t, m2_t> and
+                      std::is_same_v<m1_t, sparse_matrix_t>) {
+
+          if (not mixed_matrix_has_sparse(result))
+            throw std::invalid_argument("result must contain a sparse matrix");
+          std::get<sparse_matrix_t>(result) = m1 * m2;
+
+        } else if constexpr (std::is_same_v<m1_t, sparse_matrix_t>) {
+
+          if (mixed_matrix_has_sparse(result))
+            throw std::invalid_argument("result must contain a dense matrix");
+          std::get<Eigen::MatrixXd>(result) = m1 * m2;
+        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_ref_t>) {
+
+          if (mixed_matrix_has_sparse(result))
+            throw std::invalid_argument("result must contain a dense matrix");
+          std::get<Eigen::MatrixXd>(result) = m1 * m2;
+        } else {
+          if (mixed_matrix_has_sparse(result))
+            throw std::invalid_argument("result must contain a dense matrix");
+          std::get<Eigen::MatrixXd>(result) = m1 * m2;
+        }
+      },
+      _m1, _m2);
+}
+
+inline void mixed_matrix_mul(mixed_matrix_t &_m1, mixed_matrix_t &_m2,
+                             mixed_matrix_ref_t result) {
+  std::visit(
+      [&](auto &&m1, auto &&m2) {
+        using m1_t = std::decay_t<decltype(m1)>;
+        using m2_t = std::decay_t<decltype(m2)>;
+
+        if constexpr (std::is_same_v<m1_t, m2_t> and
+                      std::is_same_v<m1_t, sparse_matrix_t>) {
+
+          if (not mixed_matrix_ref_has_sparse(result))
+            throw std::invalid_argument("result must contain a sparse matrix");
+          std::get<sparse_matrix_ref_t>(result).get() = m1 * m2;
+
+        } else if constexpr (std::is_same_v<m1_t, sparse_matrix_t>) {
+
+          if (mixed_matrix_ref_has_sparse(result))
+            throw std::invalid_argument("result must contain a dense matrix");
+          std::get<dense_matrix_ref_t>(result) = m1 * m2;
+        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_ref_t>) {
+
+          if (mixed_matrix_ref_has_sparse(result))
+            throw std::invalid_argument("result must contain a dense matrix");
+          std::get<dense_matrix_ref_t>(result) = m1 * m2;
+        } else {
+          if (mixed_matrix_ref_has_sparse(result))
+            throw std::invalid_argument("result must contain a dense matrix");
+          std::get<dense_matrix_ref_t>(result) = m1 * m2;
+        }
+      },
+      _m1, _m2);
+}
+
+inline mixed_matrix_t get_buffer_of_product(mixed_matrix_t &_m1,
+                                            mixed_matrix_t &_m2) {
+
+  return std::visit(
+      [&](auto &&m1, auto &&m2) -> mixed_matrix_t {
+        using m1_t = std::decay_t<decltype(m1)>;
+        using m2_t = std::decay_t<decltype(m2)>;
+
+        if constexpr (std::is_same_v<m1_t, m2_t> and
+                      std::is_same_v<m1_t, sparse_matrix_ref_t>) {
+
+          return sparse_matrix_t(m1.get().rows(), m2.get().cols());
+
+        } else if constexpr (std::is_same_v<m1_t, sparse_matrix_ref_t>) {
+
+          return Eigen::MatrixXd(m1.get().rows(), m2.cols());
+        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_ref_t>) {
+
+          return Eigen::MatrixXd(m1.rows(), m2.get().cols());
+        } else {
+
+          return Eigen::MatrixXd(m1.rows(), m2.cols());
         }
       },
       _m1, _m2);

@@ -118,9 +118,6 @@ protected:
     return new MapBaseComposition(std::move(*(this)));
   }
 
-  mutable std::vector<ManifoldBase *> value_buffer_;
-  mutable std::vector<const ManifoldBase *> const_value_buffer_;
-
   void fill_matrix_result_buffers();
   void add_matrix_to_result_buffers();
 
