@@ -197,16 +197,29 @@ inline mixed_matrix_t get_buffer_of_product(mixed_matrix_t &_m1,
         if constexpr (std::is_same_v<m1_t, m2_t> and
                       std::is_same_v<m1_t, sparse_matrix_ref_t>) {
 
+          if (m1.get().cols() != m2.get().rows())
+            throw std::invalid_argument("Matrix must be able to be multiplied");
+
           return sparse_matrix_t(m1.get().rows(), m2.get().cols());
 
         } else if constexpr (std::is_same_v<m1_t, sparse_matrix_ref_t>) {
 
+          if (m1.get().cols() != m2.rows())
+            throw std::invalid_argument("Matrix must be able to be multiplied");
+
           return Eigen::MatrixXd(m1.get().rows(), m2.cols());
+
         } else if constexpr (std::is_same_v<m2_t, sparse_matrix_ref_t>) {
 
+          if (m1.cols() != m2.get().rows())
+            throw std::invalid_argument("Matrix must be able to be multiplied");
+
           return Eigen::MatrixXd(m1.rows(), m2.get().cols());
+
         } else {
 
+          if (m1.cols() != m2.rows())
+            throw std::invalid_argument("Matrix must be able to be multiplied");
           return Eigen::MatrixXd(m1.rows(), m2.cols());
         }
       },

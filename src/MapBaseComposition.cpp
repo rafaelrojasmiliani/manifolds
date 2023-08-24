@@ -167,13 +167,14 @@ void MapBaseComposition::append(const MapBase &_in) {
 
     matrix_buffers_.push_back(_in.mixed_linearization_buffer());
 
-    if (maps_.size() == 1) {
-      matrix_result_buffers_.push_back(detail::get_buffer_of_product(
-          matrix_buffers_[1], matrix_buffers_[0]));
-    }
-    if (maps_.size() > 1) {
-      matrix_result_buffers_.push_back(detail::get_buffer_of_product(
-          matrix_buffers_.back(), matrix_result_buffers_.back()));
+    if (maps_.size() >= 2) {
+      if (maps_.size() == 2) {
+        matrix_result_buffers_.push_back(detail::get_buffer_of_product(
+            matrix_buffers_[1], matrix_buffers_[0]));
+      } else {
+        matrix_result_buffers_.push_back(detail::get_buffer_of_product(
+            matrix_buffers_.end()[-2], matrix_result_buffers_.back()));
+      }
     }
   }
 
@@ -190,13 +191,14 @@ void MapBaseComposition::append(MapBase &&_in) {
 
     matrix_buffers_.push_back(_in.mixed_linearization_buffer());
 
-    if (maps_.size() == 1) {
-      matrix_result_buffers_.push_back(detail::get_buffer_of_product(
-          matrix_buffers_[1], matrix_buffers_[0]));
-    }
-    if (maps_.size() > 1) {
-      matrix_result_buffers_.push_back(detail::get_buffer_of_product(
-          matrix_buffers_.back(), matrix_result_buffers_.back()));
+    if (maps_.size() >= 2) {
+      if (maps_.size() == 2) {
+        matrix_result_buffers_.push_back(detail::get_buffer_of_product(
+            matrix_buffers_[1], matrix_buffers_[0]));
+      } else {
+        matrix_result_buffers_.push_back(detail::get_buffer_of_product(
+            matrix_buffers_.back(), matrix_result_buffers_.back()));
+      }
     }
   }
   maps_.push_back(_in.move_clone());
@@ -255,8 +257,10 @@ bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
         codomain_buffers_[i - 1].get(), codomain_buffers_[i].get(),
         detail::mixed_matrix_to_ref(matrix_buffers_[i]));
 
-    detail::mixed_matrix_mul(matrix_buffers_[i], matrix_result_buffers_[i - 1],
-                             matrix_buffers_[i]);
+    if (maps_.size() == 3) {
+      detail::mixed_matrix_mul(matrix_buffers_[i], matrix_buffers_[i - 1],
+                               matrix_result_buffers_.back());
+    }
     if (not res) {
       return res;
     }
