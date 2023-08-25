@@ -111,6 +111,8 @@ inline void mixed_matrix_ref_mul(mixed_matrix_ref_t _m1, mixed_matrix_ref_t _m2,
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<dense_matrix_ref_t>(result) = m1 * m2.get();
         } else {
+          static_assert(std::is_same_v<m1_t, m2_t> &&
+                        std::is_same_v<m1_t, Eigen::Ref<Eigen::MatrixXd>>);
 
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
@@ -139,12 +141,14 @@ inline void mixed_matrix_mul(mixed_matrix_t &_m1, mixed_matrix_t &_m2,
           if (mixed_matrix_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<Eigen::MatrixXd>(result) = m1 * m2;
-        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_ref_t>) {
+        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_t>) {
 
           if (mixed_matrix_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<Eigen::MatrixXd>(result) = m1 * m2;
         } else {
+          static_assert(std::is_same_v<m1_t, m2_t> &&
+                        std::is_same_v<m1_t, Eigen::MatrixXd>);
           if (mixed_matrix_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<Eigen::MatrixXd>(result) = m1 * m2;
@@ -172,12 +176,14 @@ inline void mixed_matrix_mul(mixed_matrix_t &_m1, mixed_matrix_t &_m2,
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<dense_matrix_ref_t>(result) = m1 * m2;
-        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_ref_t>) {
+        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_t>) {
 
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<dense_matrix_ref_t>(result) = m1 * m2;
         } else {
+          static_assert(std::is_same_v<m1_t, m2_t> &&
+                        std::is_same_v<m1_t, Eigen::MatrixXd>);
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
           std::get<dense_matrix_ref_t>(result) = m1 * m2;
@@ -195,29 +201,31 @@ inline mixed_matrix_t get_buffer_of_product(mixed_matrix_t &_m1,
         using m2_t = std::decay_t<decltype(m2)>;
 
         if constexpr (std::is_same_v<m1_t, m2_t> and
-                      std::is_same_v<m1_t, sparse_matrix_ref_t>) {
+                      std::is_same_v<m1_t, sparse_matrix_t>) {
 
-          if (m1.get().cols() != m2.get().rows())
+          if (m1.cols() != m2.rows())
             throw std::invalid_argument("Matrix must be able to be multiplied");
 
-          return sparse_matrix_t(m1.get().rows(), m2.get().cols());
+          return sparse_matrix_t(m1.rows(), m2.cols());
 
-        } else if constexpr (std::is_same_v<m1_t, sparse_matrix_ref_t>) {
+        } else if constexpr (std::is_same_v<m1_t, sparse_matrix_t>) {
 
-          if (m1.get().cols() != m2.rows())
+          if (m1.cols() != m2.rows())
             throw std::invalid_argument("Matrix must be able to be multiplied");
 
-          return Eigen::MatrixXd(m1.get().rows(), m2.cols());
+          return Eigen::MatrixXd(m1.rows(), m2.cols());
 
-        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_ref_t>) {
+        } else if constexpr (std::is_same_v<m2_t, sparse_matrix_t>) {
 
-          if (m1.cols() != m2.get().rows())
+          if (m1.cols() != m2.rows())
             throw std::invalid_argument("Matrix must be able to be multiplied");
 
-          return Eigen::MatrixXd(m1.rows(), m2.get().cols());
+          return Eigen::MatrixXd(m1.rows(), m2.cols());
 
         } else {
 
+          static_assert(std::is_same_v<m1_t, m2_t> &&
+                        std::is_same_v<m1_t, Eigen::MatrixXd>);
           if (m1.cols() != m2.rows())
             throw std::invalid_argument("Matrix must be able to be multiplied");
           return Eigen::MatrixXd(m1.rows(), m2.cols());

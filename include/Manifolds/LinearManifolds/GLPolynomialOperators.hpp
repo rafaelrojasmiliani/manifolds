@@ -416,7 +416,8 @@ public:
           },
           [](const Eigen::Matrix<double, 1, CoDomainDim> &in,
              Eigen::Ref<Eigen::MatrixXd> _diff) {
-            _diff = Eigen::Vector<double, CoDomainDim>::Ones() / in.norm();
+            _diff = Eigen::Vector<double, CoDomainDim>::Ones().transpose() /
+                    in.norm();
             return true;
           });
 };

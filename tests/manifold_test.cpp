@@ -8,8 +8,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <Eigen/Sparse>
-#include <cmath>
-#include <unordered_map>
 
 using namespace manifolds;
 
