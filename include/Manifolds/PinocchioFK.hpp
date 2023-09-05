@@ -15,19 +15,20 @@ template <std::size_t NJoints>
 class ForwardKinematics
     : public detail::Clonable<
           ForwardKinematics<NJoints>,
-          Map<DenseLinearManifold<NJoints>, DenseLinearManifold<7>>> {
+          Map<DenseLinearManifold<NJoints>, DenseLinearManifold<3>>> {
 
 private:
   pinocchio::Model model_;
   mutable pinocchio::Data data_;
+  mutable Eigen::Matrix<double, 6, NJoints> jac_buff_;
   const std::string frame_name_;
   std::size_t frame_index_;
 
 public:
-  using codomain_t = DenseLinearManifold<7>;
+  using codomain_t = DenseLinearManifold<3>;
   using base_t = detail::Clonable<
       ForwardKinematics<NJoints>,
-      Map<DenseLinearManifold<NJoints>, DenseLinearManifold<7>>>;
+      Map<DenseLinearManifold<NJoints>, DenseLinearManifold<3>>>;
 
   static ForwardKinematics from_urdf(const std::string &_path,
                                      const std::string &_frame) {
@@ -77,13 +78,20 @@ public:
 
   virtual bool diff_from_repr(
       const Eigen::Matrix<double, base_t::domain_t::dimension, 1> &in,
-      typename codomain_t::Representation &,
+      typename codomain_t::Representation &_out,
       detail::dense_matrix_ref_t _mat) const override {
 
+    pinocchio::forwardKinematics(model_, data_, in);
+    pinocchio::updateFramePlacements(model_, data_);
     pinocchio::computeJointJacobians(model_, data_, in);
     pinocchio::getFrameJacobian(model_, data_, frame_index_,
                                 pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED,
-                                _mat);
+                                jac_buff_);
+
+    _out.template head<3>() =
+        data_.oMf[model_.getFrameId(frame_name_)].translation();
+
+    _mat = this->jac_buff_.template topRows<3>();
     return true;
   }
 };

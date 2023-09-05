@@ -6,16 +6,51 @@
 
 #include <Manifolds/Interval.hpp>
 #include <Manifolds/Maps/Map.hpp>
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <functional>
-#include <optional>
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <Eigen/SparseQR>
 
 namespace manifolds {
+
+template <long Rows>
+Eigen::Vector<double, Rows> willson_barrent(detail::sparse_matrix_ref_t _mat,
+                                            Eigen::Vector<double, Rows> &_vec,
+                                            double mu, double tol = 1.e-9,
+                                            std::size_t max_iter = 100) {
+  /* Taken from Joseph Kuo et al.  Computing a projection operator onto the null
+   * space of a linear imaging operator: tutorial.
+   * Algorithm 1
+   * This algorithm requires the computation of the pinv of _mat, we overcome
+   * this problem by computing the QR solution *I belive that this minimizes the
+   * norm*
+   * */
+  static Eigen::Vector<double, Rows> f_prev;
+  static Eigen::Vector<double, Rows> f_next;
+
+  Eigen::Vector<double, Rows> r_prev(_mat.get().rows());
+  Eigen::Vector<double, Rows> r_next(_mat.get().rows());
+
+  double alpha = 2.0 / mu;
+
+  f_prev = _vec;
+  r_prev = _mat.get() * _vec;
+  Eigen::SparseQR<Eigen::SparseMatrix<double, Eigen::RowMajor>,
+                  Eigen::COLAMDOrdering<int>>
+      solver;
+  solver.compute(_mat.get());
+  for (std::size_t i = 0; i < max_iter; i++) {
+    f_next.noalias() = f_prev - alpha * solver.solve(r_prev);
+    r_next.noalias() = _mat.get() * f_next;
+    if (r_next.norm() < tol)
+      break;
+  }
+  return f_next;
+}
+
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim,
           std::size_t ContDeg, bool FixedStartPoint, bool FixedEndPoint>
 class CPWGLVPolynomial;
@@ -178,6 +213,10 @@ public:
   /// --------------- Operators -------------------------------
   /// ---------------------------------------------------------
   template <std::size_t Deg> class Derivative;
+  class Minus;
+
+  class ToVector;
+  class FromVector;
 
   class Integral;
 
@@ -296,12 +335,12 @@ public:
 
   Eigen::Ref<Eigen::Vector<double, CoDomainDim>>
   operator[](const std::size_t i) {
-    return this->repr().segment(i * CoDomainDim, CoDomainDim);
+    return this->repr().template segment<CoDomainDim>(i * CoDomainDim);
   }
 
   Eigen::Ref<const Eigen::Vector<double, CoDomainDim>>
   operator[](const std::size_t i) const {
-    return this->crepr().segment(i * CoDomainDim, CoDomainDim);
+    return this->crepr().template segment<CoDomainDim>(i * CoDomainDim);
   }
 
   Eigen::Ref<Eigen::Vector<double, CoDomainDim>>
@@ -356,9 +395,33 @@ public:
 
   static PWGLVPolynomial random(const IntervalPartition<Intervals> &_interval) {
 
-    PWGLVPolynomial result;
+    return from_repr(_interval, PWGLVPolynomial::Representation::Random());
+  }
 
-    result = from_repr(_interval, PWGLVPolynomial::Representation::Random());
+  static PWGLVPolynomial
+  random_continuous(const IntervalPartition<Intervals> &_interval) {
+
+    return from_repr(_interval, PWGLVPolynomial::Representation::Random());
+    return Continuous<2>::Inclusion(_interval)(
+        Continuous<2>::random(_interval));
+  }
+
+  static PWGLVPolynomial
+  straight_p2p(const IntervalPartition<Intervals> &_interval,
+               const Eigen::Vector<double, CoDomainDim> &_a,
+               const Eigen::Vector<double, CoDomainDim> &_b) {
+
+    Eigen::Vector<double, PWGLVPolynomial::dimension> vec;
+
+    PWGLVPolynomial result;
+    result.domain_partition_ = _interval;
+
+    Eigen::Matrix<double, 100, 1> mat;
+    for (std::size_t i = 0; i < result.size(); i++) {
+      result[i] =
+          (result.domain_point(i) - _interval.interval().first()) * (_b - _a) +
+          _a;
+    }
 
     return result;
   }

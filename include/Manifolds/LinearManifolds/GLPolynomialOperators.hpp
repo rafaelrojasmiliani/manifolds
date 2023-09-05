@@ -27,6 +27,7 @@ public:
     static auto matrix = this->get();
 
     this->repr() = matrix;
+    this->repr().makeCompressed();
 
     for (std::size_t k = 0; k < Intervals; k += 1) {
       auto interval_block = this->repr().block(
@@ -36,6 +37,7 @@ public:
           std::pow(2.0 / domain_partition_.subinterval_length(k), Deg);
     }
   }
+
   virtual bool
   value_on_repr(const typename base_t::domain_facade_t &_in,
                 typename base_t::codomain_facade_t &_out) const override {
@@ -105,6 +107,139 @@ private:
 
     return result;
   }
+};
+
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
+class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Minus
+    : public detail::Clonable<
+          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Minus,
+          Map<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+              PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+              detail::MatrixTypeId::Sparse>> {
+
+public:
+  using base_t = detail::Clonable<
+      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Minus,
+      Map<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+          detail::MatrixTypeId::Sparse>>;
+  using map_t = Map<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                    PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                    detail::MatrixTypeId::Sparse>;
+
+  Minus(const PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> &_other)
+      : base_t(), other_(_other) {}
+
+  virtual bool
+  value_on_repr(const typename base_t::domain_facade_t &_in,
+                typename base_t::codomain_facade_t &_out) const override {
+
+    if (other_.domain_partition_ != _in.domain_partition_)
+      throw std::invalid_argument("pol has a different domain");
+
+    _out.domain_partition_ = _in.domain_partition_;
+    _out.repr() = _in.crepr() - other_.crepr();
+
+    return true;
+  }
+  virtual bool
+  diff_from_repr(const typename base_t::domain_facade_t &_in,
+                 typename base_t::codomain_facade_t &_out,
+                 typename map_t::differential_ref_t mat) const override {
+
+    this->value_on_repr(_in, _out);
+    for (long i = 0; i < (long)map_t::domain_t::dimension; i++)
+      mat.get().coeffRef(i, i) = 1.0;
+    return true;
+  }
+
+private:
+  PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> other_;
+};
+
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
+class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::ToVector
+    : public detail::Clonable<
+          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::ToVector,
+          Map<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+              DenseLinearManifold<PWGLVPolynomial<NumPoints, Intervals,
+                                                  CoDomainDim>::dimension>,
+              detail::MatrixTypeId::Sparse>> {
+
+public:
+  using base_t = detail::Clonable<
+      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::ToVector,
+      Map<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+          DenseLinearManifold<
+              PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::dimension>,
+          detail::MatrixTypeId::Sparse>>;
+
+  ToVector() : base_t() {}
+
+  virtual bool
+  value_on_repr(const typename base_t::domain_facade_t &_in,
+                typename base_t::codomain_facade_t &_out) const override {
+
+    _out = _in.crepr();
+
+    return true;
+  }
+  virtual bool
+  diff_from_repr(const typename base_t::domain_facade_t &_in,
+                 typename base_t::codomain_facade_t &_out,
+                 typename map_t::differential_ref_t mat) const override {
+
+    this->value_on_repr(_in, _out);
+    for (long i = 0; i < (long)map_t::domain_t::dimension; i++)
+      mat.get().coeffRef(i, i) = 1.0;
+    mat.get().makeCompressed();
+    return true;
+  }
+};
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
+class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::FromVector
+    : public detail::Clonable<
+          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::FromVector,
+          Map<DenseLinearManifold<NumPoints * Intervals * CoDomainDim>,
+              PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+              detail::MatrixTypeId::Sparse>> {
+
+public:
+  using base_t = detail::Clonable<
+      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::FromVector,
+      Map<DenseLinearManifold<NumPoints * Intervals * CoDomainDim>,
+          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+          detail::MatrixTypeId::Sparse>>;
+  using map_t = Map<DenseLinearManifold<NumPoints * Intervals * CoDomainDim>,
+                    PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                    detail::MatrixTypeId::Sparse>;
+
+  FromVector(const IntervalPartition<Intervals> &_interval)
+      : base_t(), domain_partition_(_interval) {}
+
+  virtual bool
+  value_on_repr(const typename base_t::domain_facade_t &_in,
+                typename base_t::codomain_facade_t &_out) const override {
+
+    _out.domain_partition_ = domain_partition_;
+    _out.repr() = _in;
+
+    return true;
+  }
+
+  virtual bool
+  diff_from_repr(const typename base_t::domain_facade_t &_in,
+                 typename base_t::codomain_facade_t &_out,
+                 typename map_t::differential_ref_t mat) const override {
+    this->value_on_repr(_in, _out);
+    for (long i = 0; i < (long)map_t::domain_t::dimension; i++)
+      mat.get().coeffRef(i, i) = 1.0;
+    mat.get().makeCompressed();
+    return true;
+  }
+
+private:
+  IntervalPartition<Intervals> domain_partition_;
 };
 
 //---------------------------------------
@@ -182,7 +317,8 @@ class CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
           CPWGLVPolynomial<NumPoints, Intervals, CoDomainDim, ContDeg,
                            FixedStartPoint, FixedEndPoint>::ContinuityError,
           SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
-                          DenseLinearManifold<5>>> {
+                          DenseLinearManifold<(ContDeg + 1) *
+                                              CoDomainDim *(Intervals - 1)>>> {
 private:
   IntervalPartition<Intervals> domain_partition_;
 
@@ -200,6 +336,7 @@ public:
     static auto matrix = base_t::domain_t::continuity_matrix(ContDeg);
 
     this->repr() = matrix;
+    this->repr().makeCompressed();
 
     for (std::size_t deg = 1; deg <= ContDeg; deg++)
       for (std::size_t k = 0; k < Intervals - 1; k++) {
@@ -222,18 +359,6 @@ public:
           }
         }
       }
-  }
-  virtual bool value_on_repr(const typename base_t::domain_t &_in,
-                             typename base_t::codomain_t &_out) const override {
-
-    if (domain_partition_ != _in.domain_partition_)
-      throw std::invalid_argument("pol has a different domain");
-
-    _out.domain_partition_ = domain_partition_;
-
-    this->get_repr(_out) = this->crepr() * _in.crepr();
-
-    return true;
   }
 };
 
@@ -306,6 +431,7 @@ public:
                                                     solver.matrixQ().cols())
                               .rightCols(current_matrix.cols() - solver.rank());
     this->repr() = res.sparseView();
+    this->repr().makeCompressed();
   }
   virtual bool
   value_on_repr(const typename base_t::domain_facade_t &_in,
@@ -377,23 +503,26 @@ public:
 
   virtual bool diff_from_repr(
       const PWGLVPolynomial<NumPoints, Intervals, CoDomainDim> &in,
-      PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension> &,
-      std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>> _mat)
-      const override {
+      PWGLVPolynomial<NumPoints, Intervals, OtherCoDomain::dimension> &out,
+      detail::sparse_matrix_ref_t _mat) const override {
 
+    this->value_on_repr(in, out);
     Eigen::Matrix<double, OtherCoDomain::dimension, CoDomainDim> mat;
 
     int i0 = 0;
     int j0 = 0;
     OtherCoDomain buff;
     for (std::size_t point_index = 0; point_index < in.size(); point_index++) {
-      map_->diff(in[point_index], buff, mat);
+      domain_buffer_ = in[point_index];
+      map_->diff(domain_buffer_, buff, mat);
+      // #pragma omp parallel for
       for (std::size_t i = 0; i < OtherCoDomain::dimension; i++)
         for (std::size_t j = 0; j < CoDomainDim; j++)
           _mat.get().coeffRef(i0 + i, j0 + j) = mat(i, j);
       i0 += OtherCoDomain::dimension;
       j0 += CoDomainDim;
     }
+    _mat.get().makeCompressed();
 
     return true;
   }
@@ -414,10 +543,21 @@ public:
             out(0) = in.norm();
             return true;
           },
-          [](const Eigen::Matrix<double, 1, CoDomainDim> &in,
+          [](const Eigen::Vector<double, CoDomainDim> &in,
              Eigen::Ref<Eigen::MatrixXd> _diff) {
-            _diff = Eigen::Vector<double, CoDomainDim>::Ones().transpose() /
-                    in.norm();
+            _diff = in.transpose() / in.norm();
+            return true;
+          });
+  inline static const Composition<DenseLinearManifold<1>> squared_norm =
+      Composition<DenseLinearManifold<1>>(
+          [](const Eigen::Vector<double, CoDomainDim> &in,
+             Eigen::Vector<double, 1> &out) {
+            out(0) = in.transpose() * in;
+            return true;
+          },
+          [](const Eigen::Vector<double, CoDomainDim> &in,
+             Eigen::Ref<Eigen::MatrixXd> _diff) {
+            _diff = 2 * in.transpose();
             return true;
           });
 };

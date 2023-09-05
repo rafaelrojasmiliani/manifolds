@@ -162,7 +162,7 @@ public:
   // }
 
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  // ++++++ Casting  and implicid Cast consturcotrs  +++++++++++++++++++++++++++
+  // ++++++ Casting  and implicit Cast constructors  +++++++++++++++++++++++++++
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   constexpr operator const Representation &() const & {
     return *const_representation_;
@@ -197,7 +197,7 @@ public:
         const_representation_(representation_), owning_(true) {}
 
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  // ++++++++++++++++++ Getterns ++++++++++++++++++++++++++++++++++++++++++++++
+  // ++++++++++++++++++ Getters ++++++++++++++++++++++++++++++++++++++++++++++
   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   /// Get the dimension of the manifold
   std::size_t get_dim() const override { return Atlas::dimension; }

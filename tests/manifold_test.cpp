@@ -1,4 +1,3 @@
-#include <Manifolds/LinearManifolds/Lifting.hpp>
 #include <Manifolds/LinearManifolds/LinearManifolds.hpp>
 #include <Manifolds/LinearManifolds/Reals.hpp>
 

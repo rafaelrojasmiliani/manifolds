@@ -1,4 +1,5 @@
 #pragma once
+#define EIGEN_RUNTIME_NO_MALLOC
 #include <Eigen/Sparse>
 #include <Manifolds/ManifoldBase.hpp>
 #include <functional>
@@ -56,12 +57,11 @@ using MixedMatrix =
 using mixed_matrix_ref_t =
     std::variant<dense_matrix_ref_t, sparse_matrix_ref_t>;
 
-using DifferentialReprRefType = std::variant<
-    Eigen::Ref<Eigen::MatrixXd>,
-    std::reference_wrapper<Eigen::SparseMatrix<double, Eigen::RowMajor>>>;
+using DifferentialReprRefType =
+    std::variant<Eigen::Ref<Eigen::MatrixXd>,
+                 std::reference_wrapper<sparse_matrix_t>>;
 
-using mixed_matrix_t =
-    std::variant<Eigen::MatrixXd, Eigen::SparseMatrix<double, Eigen::RowMajor>>;
+using mixed_matrix_t = std::variant<Eigen::MatrixXd, sparse_matrix_t>;
 
 enum MatrixTypeId { Dense = 0, Sparse };
 
@@ -140,18 +140,18 @@ inline void mixed_matrix_mul(mixed_matrix_t &_m1, mixed_matrix_t &_m2,
 
           if (mixed_matrix_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
-          std::get<Eigen::MatrixXd>(result) = m1 * m2;
+          std::get<Eigen::MatrixXd>(result).noalias() = m1 * m2;
         } else if constexpr (std::is_same_v<m2_t, sparse_matrix_t>) {
 
           if (mixed_matrix_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
-          std::get<Eigen::MatrixXd>(result) = m1 * m2;
+          std::get<Eigen::MatrixXd>(result).noalias() = m1 * m2;
         } else {
           static_assert(std::is_same_v<m1_t, m2_t> &&
                         std::is_same_v<m1_t, Eigen::MatrixXd>);
           if (mixed_matrix_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
-          std::get<Eigen::MatrixXd>(result) = m1 * m2;
+          std::get<Eigen::MatrixXd>(result).noalias() = m1 * m2;
         }
       },
       _m1, _m2);
@@ -169,24 +169,25 @@ inline void mixed_matrix_mul(mixed_matrix_t &_m1, mixed_matrix_t &_m2,
 
           if (not mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a sparse matrix");
+          /// See this https://gitlab.com/libeigen/eigen/-/issues/385
           std::get<sparse_matrix_ref_t>(result).get() = m1 * m2;
 
         } else if constexpr (std::is_same_v<m1_t, sparse_matrix_t>) {
 
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
-          std::get<dense_matrix_ref_t>(result) = m1 * m2;
+          std::get<dense_matrix_ref_t>(result).noalias() = m1 * m2;
         } else if constexpr (std::is_same_v<m2_t, sparse_matrix_t>) {
 
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
-          std::get<dense_matrix_ref_t>(result) = m1 * m2;
+          std::get<dense_matrix_ref_t>(result).noalias() = m1 * m2;
         } else {
           static_assert(std::is_same_v<m1_t, m2_t> &&
                         std::is_same_v<m1_t, Eigen::MatrixXd>);
           if (mixed_matrix_ref_has_sparse(result))
             throw std::invalid_argument("result must contain a dense matrix");
-          std::get<dense_matrix_ref_t>(result) = m1 * m2;
+          std::get<dense_matrix_ref_t>(result).noalias() = m1 * m2;
         }
       },
       _m1, _m2);
@@ -307,11 +308,14 @@ public:
 
   using base_t = Clonable;
 
-  std::unique_ptr<Current> clone() const {
+  std::unique_ptr<Current> clone() const & {
     return std::unique_ptr<Current>(static_cast<Current *>(this->clone_impl()));
   }
+  std::unique_ptr<Current> clone() && { return move_clone(); }
+
   std::unique_ptr<Current> move_clone() {
-    return std::unique_ptr<Current>(static_cast<Current *>(move_clone_impl()));
+    return std::unique_ptr<Current>(
+        static_cast<Current *>(this->move_clone_impl()));
   }
 
   template <bool B = inherits_from_v<ManifoldBase, Bases...>,

@@ -63,7 +63,8 @@ auto register_user_map(Mod &m, const std::string &name) {
   py::class_<typename M::base_t, MapTrampoline<typename M::base_t>,
              typename M::map_t>(m, (name + "Clonable").c_str())
       .def(py::init<>())
-      .def("clone", &M::base_t::clone)
+      .def("clone",
+           [](const typename M::base_t &_this) { return _this.clone(); })
       .def("move_clone", &M::base_t::move_clone);
 
   py::class_<M, typename M::base_t> result(m, name.c_str());
@@ -83,7 +84,8 @@ auto register_user_linear_map(Mod &m, const std::string &name) {
              MapTrampoline<typename M::map_t::base_t>, typename M::map_t::map_t,
              typename M::map_t::manifold_t>(m, (name + "ClonableA").c_str())
       .def(py::init<>())
-      .def("clone", &M::map_t::base_t::clone)
+      .def("clone",
+           [](const typename M::map_t::base_t &_this) { return _this.clone(); })
       .def("move_clone", &M::map_t::base_t::move_clone);
 
   py::class_<typename M::map_t, typename M::map_t::base_t>(
@@ -93,7 +95,8 @@ auto register_user_linear_map(Mod &m, const std::string &name) {
   py::class_<typename M::base_t, MapTrampoline<typename M::base_t>>(
       m, (name + "Clonable").c_str())
       .def(py::init<>())
-      .def("clone", &M::base_t::clone)
+      .def("clone",
+           [](const typename M::base_t &_this) { return _this.clone(); })
       .def("move_clone", &M::base_t::move_clone);
 
   py::class_<M, typename M::base_t> result(m, name.c_str());
@@ -133,7 +136,8 @@ auto register_polynomial(py::module &m, const std::string &name) {
              typename M::map_t, typename M::manifold_t>(
       m, (name + "Clonable").c_str())
       .def(py::init<>())
-      .def("clone", &M::base_t::clone)
+      .def("clone",
+           [](const typename M::base_t &_this) { return _this.clone(); })
       .def("move_clone", &M::base_t::move_clone);
 
   // Add Polynomial
@@ -145,7 +149,7 @@ auto register_polynomial(py::module &m, const std::string &name) {
       .def("deriv",
            [](const M &_this) {
              const auto &dom = _this.get_domain();
-             const IntervalPartition<10> ip(dom);
+             const typename M::interval_partition_t ip(dom);
              return typename M::template Derivative<1>(ip)(_this);
            })
       .def_static("constant", &M::constant)
@@ -166,7 +170,8 @@ auto register_polynomial(py::module &m, const std::string &name) {
              typename C::map_t, typename C::manifold_t>(
       result, ("C" + name + "Clonable").c_str())
       .def(py::init<>())
-      .def("clone", &C::base_t::clone)
+      .def("clone",
+           [](const typename C::base_t &_this) { return _this.clone(); })
       .def("move_clone", &C::base_t::move_clone);
 
   py::class_<C, typename C::base_t> continuous(result, ("C" + name).c_str());
@@ -250,9 +255,21 @@ PYBIND11_MODULE(pymanifolds, manifolds_module) {
            [](const MapBase &_this, const ManifoldBase &_that) {
              return _this.value(_that);
            })
-      .def("diff", [](const MapBase &_this, const ManifoldBase &_that) {
-        return _this.diff(_that);
-      });
+      .def("diff", [](const MapBase &_this,
+                      const ManifoldBase &_that) { return _this.diff(_that); })
+      .def(
+          "__pipe__",
+          [](const MapBase &_lhs, const MapBase &_rhs) { return _lhs | _rhs; },
+          py::is_operator());
+
+  py::class_<MapBaseComposition, MapBase>(manifolds_module, "Map")
+      .def(py::init<MapBase &>())
+      .def("value",
+           [](const MapBaseComposition &_this, const ManifoldBase &_that) {
+             return _this.value(_that);
+           })
+      .def("diff", [](const MapBaseComposition &_this,
+                      const ManifoldBase &_that) { return _this.diff(_that); });
 
   py::class_<MapBaseComposition, MapBase>(manifolds_module, "MapComposition")
       .def(py::init<const MapBase &>());
@@ -279,8 +296,6 @@ PYBIND11_MODULE(pymanifolds, manifolds_module) {
       .def(py::init<double, double>());
   using Pol = PWGLVPolynomial<10, 10, 7>;
   register_polynomial<Pol>(linear_manifolds, "GLPolynomial");
-  // register_polynomial<PWGLVPolynomial<10, 10, 3>>(linear_manifolds,
-  //                                                 "GLPolynomial_3");
 
   auto p = register_polynomial<PWGLVPolynomial<10, 10, 1>>(linear_manifolds,
                                                            "GLPolynomial_1");

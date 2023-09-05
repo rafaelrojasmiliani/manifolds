@@ -62,6 +62,9 @@ public:
   virtual detail::mixed_matrix_t mixed_linearization_buffer() const = 0;
   virtual detail::MatrixTypeId differential_type() const = 0;
 
+  virtual bool diff_is_identity() const { return false; }
+  virtual bool diff_constant() const { return false; }
+
 protected:
   virtual MapBase *clone_impl() const = 0;
   virtual MapBase *move_clone_impl() = 0;

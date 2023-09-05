@@ -1,3 +1,4 @@
+#define EIGEN_RUNTIME_NO_MALLOC
 #include <Manifolds/Maps/MapBaseComposition.hpp>
 #include <cstddef>
 #include <functional>
@@ -19,6 +20,7 @@ detail::mixed_matrix_t get_diff_comp_buffer(const MapBase &_first,
 void MapBaseComposition::add_matrix_to_result_buffers() {
 
   std::size_t last_index = matrix_buffers_.size() - 1;
+
   std::size_t penultimate_index = last_index - 1;
   std::visit(
       [this, last_index, penultimate_index](auto &&arg, auto &&arg2) {
@@ -279,31 +281,33 @@ bool MapBaseComposition::diff_impl(const ManifoldBase *_in, ManifoldBase *_out,
     detail::mixed_matrix_mul(matrix_buffers_.back(),
                              matrix_result_buffers_.back(), _mat);
 
+  if (detail::mixed_matrix_ref_has_sparse(_mat))
+    std::get<detail::sparse_matrix_ref_t>(_mat).get().makeCompressed();
   return res;
 }
 
 ManifoldBase *MapBaseComposition::domain_buffer_impl() const {
-  return maps_.back()->domain_buffer().release();
+  return maps_.front()->domain_buffer().release();
 }
 
 ManifoldBase *MapBaseComposition::codomain_buffer_impl() const {
-  return maps_.front()->codomain_buffer().release();
+  return maps_.back()->codomain_buffer().release();
 }
 
 // -------------------------------------------
 // -------- Getters    -----------------------
 // -------------------------------------------
 std::size_t MapBaseComposition::get_dom_dim() const {
-  return maps_.back()->get_dom_dim();
+  return maps_.front()->get_dom_dim();
 }
 std::size_t MapBaseComposition::get_codom_dim() const {
-  return maps_.front()->get_codom_dim();
+  return maps_.back()->get_codom_dim();
 }
 std::size_t MapBaseComposition::get_dom_tangent_repr_dim() const {
-  return maps_.back()->get_dom_dim();
+  return maps_.front()->get_dom_tangent_repr_dim();
 }
 std::size_t MapBaseComposition::get_codom_tangent_repr_dim() const {
-  return maps_.front()->get_codom_dim();
+  return maps_.back()->get_codom_tangent_repr_dim();
 }
 
 } // namespace manifolds

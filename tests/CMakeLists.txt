@@ -1,6 +1,6 @@
 include(GoogleTest)
 include_directories(PUBLIC ${PROJECT_SOURCE_DIR}/include ${EIGEN3_INCLUDE_DIRS}
-                    ${pinocchio_INCLUDE_DIRS})
+                    ${pinocchio_INCLUDE_DIRS} ${ifopt_INCLUDE_DIRS})
 
 file(GLOB_RECURSE test_list ${PROJECT_SOURCE_DIR}/tests/*.cpp)
 file(GLOB_RECURSE test_py_list ${CMAKE_SOURCE_DIR}/tests/*.py)
@@ -30,8 +30,9 @@ foreach(file_path ${test_list})
   # "/path/to/your/working/directory")
 
   # https://github.com/stack-of-tasks/pinocchio/issues/1261
-  target_link_libraries(${new_name} PRIVATE gtest pthread manifolds
-                                            Eigen3::Eigen pinocchio::pinocchio)
+  target_link_libraries(
+    ${new_name} PRIVATE gtest pthread manifolds Eigen3::Eigen
+                        pinocchio::pinocchio ${ifopt_LIBRARIES})
 endforeach()
 
 foreach(file_path ${test_py_list})

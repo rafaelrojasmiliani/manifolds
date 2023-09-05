@@ -148,7 +148,7 @@ public:
     return linearization_buffer();
   }
 
-  differential_t linearization_buffer() const {
+  virtual differential_t linearization_buffer() const {
     // FIXME adapt to dynamic type
     if constexpr (DT == detail::MatrixTypeId::Dense)
       return Eigen::MatrixXd(codomain_t::tangent_repr_dimension,
@@ -303,8 +303,9 @@ public:
   }
 
   bool diff_from_repr(const typename base_t::domain_facade_t &_in,
-                      typename base_t::codomain_facade_t &,
+                      typename base_t::codomain_facade_t &_out,
                       typename base_t::differential_ref_t _mat) const override {
+    value_fun_(_in, _out);
     return diff_fun_(_in, _mat);
   }
 

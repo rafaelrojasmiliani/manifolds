@@ -125,6 +125,7 @@ public:
                               detail::sparse_matrix_ref_t _mat) const override {
     this->value_on_repr(_in, _out);
     _mat.get() = this->crepr();
+    _mat.get().makeCompressed();
     return true;
   }
 };

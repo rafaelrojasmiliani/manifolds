@@ -1,6 +1,7 @@
 #pragma once
 #include <Manifolds/Manifold.hpp>
 #include <Manifolds/Maps/Map.hpp>
+#include <chrono>
 #include <gtest/gtest.h>
 namespace manifolds {
 
@@ -18,7 +19,7 @@ template <typename T> struct TestManifold {
 
     EXPECT_TRUE(empty_constructed == move_constructed);
 
-     manifold_base(move_constructed);
+    manifold_base(move_constructed);
   }
 
   /// Here we test that we can manipulate the value of the
@@ -68,13 +69,13 @@ template <typename T> struct TestManifoldFaithful : public TestManifold<T> {
 
   TestManifoldFaithful() : TestManifold<T>() {
 
-    //T manifold = T::random_projection();
+    // T manifold = T::random_projection();
 
-    //typename T::Representation representation;
+    // typename T::Representation representation;
 
-    //representation = manifold;
+    // representation = manifold;
 
-    //EXPECT_TRUE(T::atlas::comparison(representation, manifold.crepr()));
+    // EXPECT_TRUE(T::atlas::comparison(representation, manifold.crepr()));
 
     // representation = T::atlas::random_projection();
 
@@ -149,5 +150,27 @@ template <typename T> struct TestMap {
     auto codomain_value_b = cloned_base->value(*domain_value.clone());
   }
 };
+
+template <typename T> double mean_diff(const T &map, std::size_t n = 100) {
+  std::chrono::steady_clock::time_point begin =
+      std::chrono::steady_clock::now();
+  auto in = typename T::domain_t();
+  auto out = typename T::codomain_t();
+  auto mat = map.linearization_buffer();
+
+  long micro_secs = 0;
+
+  for (std::size_t _ = 0; _ < n; _++) {
+    map.diff(in, out, mat);
+    std::chrono::steady_clock::time_point end =
+        std::chrono::steady_clock::now();
+
+    micro_secs +=
+        std::chrono::duration_cast<std::chrono::microseconds>(end - begin)
+            .count();
+  }
+
+  return ((double)micro_secs) / (double)n;
+}
 
 } // namespace manifolds

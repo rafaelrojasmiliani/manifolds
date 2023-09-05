@@ -23,18 +23,12 @@ if(OPENMP_FOUND)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(ENV{ASAN_OPTIONS} "symbolize=1:detect_leaks=1")
-  set(CMAKE_CXX_FLAGS_DEBUG
-      "${CMAKE_CXX_FLAGS_DEBUG} \
-      -fsanitize=address \
-      -fsanitize=float-divide-by-zero \
-      -fsanitize=float-cast-overflow \
-      -fsanitize=undefined \
-      -fno-sanitize=alignment \
-      -fno-sanitize=null \
-      -fno-omit-frame-pointer \
-      -fno-sanitize-recover=all ")
-  # -Q \ -ftime-report command for compilation profiling
+  # set(ENV{ASAN_OPTIONS} "symbolize=1:detect_leaks=1")
+  # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ -fsanitize=address \
+  # -fsanitize=float-divide-by-zero \ -fsanitize=float-cast-overflow \
+  # -fsanitize=undefined \ -fno-sanitize=alignment \ -fno-sanitize=null \
+  # -fno-omit-frame-pointer \ -fno-sanitize-recover=all ") -Q \ -ftime-report
+  # command for compilation profiling
   set(CMAKE_LINKER_FLAGS_DEBUG ${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address)
 endif()
 
@@ -50,6 +44,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # include ifopt with custon ROS installation
 find_package(Eigen3 REQUIRED)
 find_package(pybind11 REQUIRED)
+find_package(ifopt REQUIRED)
 
 set(SOURCE_FILES
     ${PROJECT_SOURCE_DIR}/src/Atlases/Sphere.cpp
@@ -65,7 +60,7 @@ if(USE_PINOCCHIO)
 endif()
 
 add_library(manifolds SHARED ${SOURCE_FILES})
-target_link_libraries(manifolds ${pinocchio_LIBRARIES})
+target_link_libraries(manifolds ${pinocchio_LIBRARIES} ${ifopt_LIBRARIES})
 
 target_include_directories(
   manifolds
@@ -75,7 +70,8 @@ target_include_directories(
          /usr/include/eigen3
          ${PROJECT_SOURCE_DIR}/submodules/gcem/include/
          ${PROJECT_SOURCE_DIR}/submodules/fpm/include/
-         ${pinocchio_INCLUDE_DIRS})
+         ${pinocchio_INCLUDE_DIRS}
+         ${ifopt_INCLUDE_DIRS})
 
 target_compile_options(manifolds PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
