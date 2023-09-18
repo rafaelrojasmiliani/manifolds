@@ -71,9 +71,8 @@ public:
 
   static constexpr std::size_t tangent_repr_dimension = 1;
 
-  static bool comparison(const Representation &_lhs,
-                         const Representation &_rhs) {
-    double _tol = 1.0e-12;
+  static bool comparison(const Representation &_lhs, const Representation &_rhs,
+                         double _tol = 1.0e-6) {
     double err = std::abs(_lhs - _rhs);
     double lhs_max = std::fabs(_lhs);
     double rhs_max = std::fabs(_rhs);

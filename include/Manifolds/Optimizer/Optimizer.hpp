@@ -13,6 +13,9 @@ namespace manifolds {
 namespace optimizer {
 
 template <std::size_t Dim>
+DenseLinearManifold<Dim> get_initial_from_affine_ctr() {}
+
+template <std::size_t Dim>
 class ManifoldVariable : public ifopt::VariableSet,
                          public DenseLinearManifold<Dim> {
 public:

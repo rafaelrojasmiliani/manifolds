@@ -2,8 +2,6 @@
 #include <Manifolds/Detail.hpp>
 #include <Manifolds/LinearManifolds/LinearManifolds.hpp>
 #include <Manifolds/Maps/Map.hpp>
-#include <cstddef>
-#include <type_traits>
 namespace manifolds {
 
 template <typename Domain, typename Codomain> class SparseLinearMap;
@@ -125,6 +123,105 @@ public:
                               detail::sparse_matrix_ref_t _mat) const override {
     this->value_on_repr(_in, _out);
     _mat.get() = this->crepr();
+    _mat.get().makeCompressed();
+    return true;
+  }
+};
+
+template <typename Domain>
+class AlgebraicMap
+    : public Map<Domain, Domain, detail::decide_matrix_type<Domain, Domain>()> {
+
+private:
+  Domain value_;
+  AlgebraicMap(const Domain &_value) : value_(_value) {}
+  AlgebraicMap(Domain &&_value) : value_(std::move(_value)) {}
+  const Domain &get_value() const { return value_; }
+};
+
+template <typename Domain>
+class Plus : public detail::Clonable<Plus<Domain>, AlgebraicMap<Domain>> {
+
+public:
+  using base_t = detail::Clonable<Plus<Domain>, AlgebraicMap<Domain>>;
+
+  Plus(const Domain &_value) : base_t(_value) {}
+
+  virtual bool
+  value_on_repr(const typename base_t::domain_facade_t &_in,
+                typename base_t::codomain_facade_t &_out) const override {
+
+    const typename base_t::domain_t::Representation *input_ptr;
+    typename base_t::codomain_t::Representation *output_ptr;
+
+    if constexpr (base_t::domain_t::is_faithful)
+      input_ptr = &_in;
+    else
+      input_ptr = &(_in.crepr());
+    if constexpr (base_t::codomain_t::is_faithful)
+      output_ptr = &_out;
+    else
+      output_ptr = &(this->get_repr(_out));
+    *output_ptr = this->get_value().crepr() + (*input_ptr);
+    return true;
+  }
+
+  virtual bool
+  diff_from_repr(const typename base_t::domain_facade_t &_in,
+                 typename base_t::codomain_facade_t &_out,
+                 typename base_t::differential_ref_t _mat) const override {
+    this->value_on_repr(_in, _out);
+
+    if constexpr (base_t::differential_type_id ==
+                  detail::MatrixTypeId::Sparse) {
+      for (long i = 0; i < (long)base_t::domain_t::dimension; i++)
+        _mat.get().coeffRef(i, i) = 1.0;
+      _mat.get().makeCompressed();
+    } else {
+      for (long i = 0; i < (long)base_t::domain_t::dimension; i++)
+        _mat(i, i) = 1.0;
+    }
+    return true;
+  }
+};
+
+template <typename Domain, typename Codomain>
+class SparseAffineMap
+    : public detail::Clonable<
+          Map<Domain, Codomain, detail::MatrixTypeId::Sparse>> {
+
+private:
+  detail::sparse_matrix_t mat_;
+  Eigen::Matrix<double, Codomain::dimension, 1> vec_;
+
+public:
+  using map_t = Map<Domain, Codomain, detail::MatrixTypeId::Sparse>;
+
+  using base_t =
+      detail::Clonable<Map<Domain, Codomain, detail::MatrixTypeId::Sparse>>;
+
+  virtual bool
+  value_on_repr(const typename base_t::domain_facade_t &_in,
+                typename base_t::codomain_facade_t &_out) const override {
+    const typename base_t::domain_t::Representation *input_ptr;
+    typename base_t::codomain_t::Representation *output_ptr;
+    if constexpr (base_t::domain_t::is_faithful)
+      input_ptr = &_in;
+    else
+      input_ptr = &(_in.crepr());
+    if constexpr (base_t::codomain_t::is_faithful)
+      output_ptr = &_out;
+    else
+      output_ptr = &(this->get_repr(_out));
+    *output_ptr = mat_ * (*input_ptr) + vec_;
+    return true;
+  }
+
+  virtual bool diff_from_repr(const typename base_t::domain_facade_t &_in,
+                              typename base_t::codomain_facade_t &_out,
+                              detail::sparse_matrix_ref_t _mat) const override {
+    this->value_on_repr(_in, _out);
+    _mat.get() = mat_;
     _mat.get().makeCompressed();
     return true;
   }

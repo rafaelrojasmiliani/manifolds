@@ -98,9 +98,9 @@ using namespace manifolds;
 // }
 TEST(GLPolynomial, DriftNorm) {
 
-  constexpr std::size_t intervals = 2;
-  constexpr std::size_t nglp = 8;
-  constexpr std::size_t dim = 2;
+  constexpr std::size_t intervals = 12;
+  constexpr std::size_t nglp = 14;
+  constexpr std::size_t dim = 7;
   IntervalPartition<intervals> interval(0.0, 2.0);
   using Pol = PWGLVPolynomial<nglp, intervals, dim>;
   using ScalarPol = PWGLVPolynomial<nglp, intervals, 1>;
@@ -108,22 +108,23 @@ TEST(GLPolynomial, DriftNorm) {
   auto trj = Pol::straight_p2p(interval, Pol::codomain_t::random(),
                                Pol::codomain_t::random());
 
-  auto foo = Pol::FromVector(interval) | Pol::Minus(trj) |
-             Pol::functions::squared_norm | ScalarPol::Integral(interval);
+  auto cost = Pol::FromVector(interval) | Pol::Minus(trj) |
+              Pol::functions::squared_norm | ScalarPol::Integral(interval);
 
-  auto fv = Pol::FromVector(interval);
-  auto ce = Pol::Continuous<2>::ContinuityError(interval);
-  auto continuity = fv | ce;
+  auto continuity =
+      Pol::FromVector(interval) | Pol::Continuous<2>::ContinuityError(interval);
+
   auto pol = Pol::Continuous<2>::Inclusion(interval)(
       Pol::Continuous<2>::random(interval));
-  optimizer::Cost c(foo);
+
+  optimizer::Cost c(cost);
   optimizer::Constraint c2(continuity);
   optimizer::Problem p(c);
   p && (c2);
 
   Eigen::VectorXd res = p.solve_ipopt();
-  std::cout << res.transpose() << "\n";
-  std::cout << trj.crepr().transpose() << "\n";
+  std::cout << res.transpose().head(dim * 2) << "\n";
+  std::cout << trj.crepr().transpose().head(dim * 2) << "\n";
 }
 
 int main(int argc, char **argv) {

@@ -220,6 +220,10 @@ public:
 
   class Integral;
 
+  class FirstPoint;
+
+  class LastPoint;
+
   template <typename CoDomain> class Composition;
 
   class functions;

@@ -110,6 +110,79 @@ private:
 };
 
 template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
+class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::FirstPoint
+    : public detail::Clonable<
+          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::FirstPoint,
+          SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                          DenseLinearManifold<CoDomainDim>>> {
+
+public:
+  using base_t = detail::Clonable<
+      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::FirstPoint,
+      SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                      DenseLinearManifold<CoDomainDim>>>;
+
+  FirstPoint() : base_t() {
+    static auto matrix = this->get();
+
+    this->repr() = matrix;
+    this->repr().makeCompressed();
+  }
+
+private:
+  IntervalPartition<Intervals> domain_partition_;
+  static Eigen::SparseMatrix<double, Eigen::RowMajor> get() {
+
+    Eigen::SparseMatrix<double, Eigen::RowMajor> result(
+        base_t::codomain_t::dimension, base_t::domain_t::dimension);
+
+    for (auto i = 0u; i < CoDomainDim; i++)
+      result.coeffRef(NumPoints * Intervals * CoDomainDim - CoDomainDim - 1 + i,
+                      i) = 1.0;
+
+    result.makeCompressed();
+
+    return result;
+  }
+};
+
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
+class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::LastPoint
+    : public detail::Clonable<
+          PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::LastPoint,
+          SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                          DenseLinearManifold<CoDomainDim>>> {
+
+public:
+  using base_t = detail::Clonable<
+      PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::LastPoint,
+      SparseLinearMap<PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>,
+                      DenseLinearManifold<CoDomainDim>>>;
+
+  LastPoint() : base_t() {
+    static auto matrix = this->get();
+
+    this->repr() = matrix;
+    this->repr().makeCompressed();
+  }
+
+private:
+  IntervalPartition<Intervals> domain_partition_;
+  static Eigen::SparseMatrix<double, Eigen::RowMajor> get() {
+
+    Eigen::SparseMatrix<double, Eigen::RowMajor> result(
+        base_t::codomain_t::dimension, base_t::domain_t::dimension);
+
+    for (auto i = 0u; i < CoDomainDim; i++)
+      result.coeffRef(i, i) = 1.0;
+
+    result.makeCompressed();
+
+    return result;
+  }
+};
+
+template <std::size_t NumPoints, std::size_t Intervals, std::size_t CoDomainDim>
 class PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Minus
     : public detail::Clonable<
           PWGLVPolynomial<NumPoints, Intervals, CoDomainDim>::Minus,

@@ -380,5 +380,12 @@ private:
     return new Current(static_cast<Current &&>(std::move(*this)));
   }
 };
+
+template <typename Domain, typename Codomain>
+constexpr MatrixTypeId decide_matrix_type() {
+  return (Domain::dimension * Codomain::dimension > 1000)
+             ? MatrixTypeId::Dense
+             : MatrixTypeId::Sparse;
+}
 } // namespace detail
 } // namespace manifolds

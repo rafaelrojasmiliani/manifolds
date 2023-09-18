@@ -2,9 +2,6 @@
 #include <Manifolds/Atlases/LinearManifolds.h>
 #include <Manifolds/Detail.hpp>
 #include <Manifolds/Manifold.hpp>
-#include <iostream>
-#include <random>
-#include <type_traits>
 
 namespace manifolds {
 

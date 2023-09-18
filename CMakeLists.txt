@@ -23,12 +23,17 @@ if(OPENMP_FOUND)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # set(ENV{ASAN_OPTIONS} "symbolize=1:detect_leaks=1")
-  # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \ -fsanitize=address \
-  # -fsanitize=float-divide-by-zero \ -fsanitize=float-cast-overflow \
-  # -fsanitize=undefined \ -fno-sanitize=alignment \ -fno-sanitize=null \
-  # -fno-omit-frame-pointer \ -fno-sanitize-recover=all ") -Q \ -ftime-report
-  # command for compilation profiling
+  set(ENV{ASAN_OPTIONS} "symbolize=1:detect_leaks=1")
+  set(CMAKE_CXX_FLAGS_DEBUG
+      "${CMAKE_CXX_FLAGS_DEBUG} \ -fsanitize=address \
+  -fsanitize=float-divide-by-zero \
+  -fsanitize=float-cast-overflow \
+  -fsanitize=undefined \
+  -fno-sanitize=alignment \
+  -fno-sanitize=null \
+  -fno-omit-frame-pointer \
+  -fno-sanitize-recover=all ")
+  # -Q \ -ftime-report command for compilation profiling
   set(CMAKE_LINKER_FLAGS_DEBUG ${CMAKE_LINKER_FLAGS_DEBUG} -fsanitize=address)
 endif()
 
@@ -88,15 +93,11 @@ if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/compile_commands.json")
       ${CMAKE_CURRENT_SOURCE_DIR}/compile_commands.json)
 endif()
 
-pybind11_add_module(pymanifolds
-                    ${PROJECT_SOURCE_DIR}/python/bindings/bindings.cpp)
-target_include_directories(
-  pymanifolds
-  PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-         $<INSTALL_INTERFACE:include>
-         ${Eigen3_INCLUDE_DIRS}
-         /usr/include/eigen3
-         ${PROJECT_SOURCE_DIR}/submodules/gcem/include/
-         ${PROJECT_SOURCE_DIR}/submodules/fpm/include/
-         ${pinocchio_INCLUDE_DIRS})
-target_link_libraries(pymanifolds PUBLIC manifolds)
+# pybind11_add_module(pymanifolds
+# ${PROJECT_SOURCE_DIR}/python/bindings/bindings.cpp)
+# target_include_directories( pymanifolds PUBLIC
+# $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>
+# ${Eigen3_INCLUDE_DIRS} /usr/include/eigen3
+# ${PROJECT_SOURCE_DIR}/submodules/gcem/include/
+# ${PROJECT_SOURCE_DIR}/submodules/fpm/include/ ${pinocchio_INCLUDE_DIRS})
+# target_link_libraries(pymanifolds PUBLIC manifolds)
